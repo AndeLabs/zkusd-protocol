@@ -1,0 +1,30 @@
+[package]
+name = "zkusd-stability-pool"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Stability Pool for zkUSD protocol - first line of defense against liquidations"
+keywords = ["bitcoin", "defi", "stability-pool", "stablecoin", "charms"]
+categories = ["cryptography::cryptocurrencies"]
+
+[features]
+default = []
+charms = ["charms-sdk", "charms-data"]
+
+[dependencies]
+zkusd-common = { workspace = true }
+serde = { workspace = true }
+borsh = { workspace = true }
+sha2 = { workspace = true }
+
+# Charms SDK (optional, enabled with "charms" feature)
+charms-sdk = { workspace = true, optional = true }
+charms-data = { workspace = true, optional = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "zkusd-stability-pool-app"
+path = "src/main.rs"
+required-features = ["charms"]
