@@ -1,0 +1,30 @@
+# zkUSD Price Oracle Initialization Spell
+# Creates an NFT charm with the initial oracle state
+
+version: 8
+
+apps:
+  # Oracle as NFT: n/{app_id}/{vk}
+  $00: n/${app_id}/${app_vk}
+
+# Witness data - the UTXO being spent (required for NFT minting)
+private_inputs:
+  $00: "${funding_utxo}"
+
+ins:
+  # Funding UTXO (no charms attached)
+  - utxo_id: ${funding_utxo}
+    charms: {}
+
+outs:
+  # Output with oracle charm containing initial state
+  - address: ${oracle_address}
+    charms:
+      $00:
+        price: 10000000000000
+        timestamp_block: 0
+        source: 0
+        operator: ${operator_pubkey}
+        admin: ${admin_pubkey}
+        is_active: true
+        last_valid_price: 10000000000000

@@ -1,0 +1,79 @@
+# zkUSD Stability Pool Withdraw Spell
+# Withdraw zkUSD from stability pool and claim BTC rewards
+#
+# Compounding Calculation:
+# - Remaining deposit = initial_deposit * (current_P / snapshot_P)
+# - BTC rewards = initial_deposit * (current_S - snapshot_S) / snapshot_P
+#
+# Reference: https://github.com/liquity/dev/blob/main/packages/contracts/contracts/StabilityPool.sol
+#
+version: 8
+
+apps:
+  # zkUSD Token
+  $00: t/${zkusd_app_id}/${zkusd_vk}
+  # Stability Pool NFT
+  $01: n/${stability_pool_app_id}/${stability_pool_vk}
+  # Depositor Position NFT
+  $02: n/${depositor_nft_app_id}/${depositor_nft_vk}
+
+ins:
+  # Input 1: Depositor position NFT
+  - utxo_id: ${depositor_utxo}
+    charms:
+      $02:
+        depositor: ${depositor_pubkey}
+        initial_deposit: ${initial_deposit}
+        snapshot_p: ${snapshot_p}
+        snapshot_s: ${snapshot_s}
+        snapshot_epoch: ${snapshot_epoch}
+        snapshot_scale: ${snapshot_scale}
+
+  # Input 2: Current stability pool state
+  - utxo_id: ${stability_pool_utxo}
+    charms:
+      $01:
+        total_zkusd: ${sp_total_zkusd}
+        total_btc: ${sp_total_btc}
+        product_p: ${sp_product_p}
+        sum_s: ${sp_sum_s}
+        current_epoch: ${sp_epoch}
+        current_scale: ${sp_scale}
+        depositor_count: ${sp_depositors}
+
+outs:
+  # Output 1: Updated stability pool state
+  - address: ${stability_pool_address}
+    charms:
+      $01:
+        total_zkusd: ${sp_new_total}      # sp_total - withdrawal
+        total_btc: ${sp_new_btc}          # sp_btc - rewards_claimed
+        product_p: ${sp_product_p}
+        sum_s: ${sp_sum_s}
+        current_epoch: ${sp_epoch}
+        current_scale: ${sp_scale}
+        depositor_count: ${sp_new_count}  # -1 if full withdrawal
+
+  # Output 2: Withdrawn zkUSD to depositor
+  # Amount = compounded_deposit (may be less than initial due to absorptions)
+  - address: ${depositor_address}
+    charms:
+      $00: ${compounded_deposit}
+
+  # Output 3: BTC rewards to depositor
+  - address: ${depositor_address}
+    charms: {}
+    # BTC amount = accumulated_btc_rewards
+
+  # Output 4: Updated depositor position (if partial withdrawal)
+  # Omit if full withdrawal (NFT is burned)
+  - address: ${depositor_address}
+    charms:
+      $02:
+        depositor: ${depositor_pubkey}
+        initial_deposit: ${remaining_deposit}
+        snapshot_p: ${sp_product_p}       # Update to current
+        snapshot_s: ${sp_sum_s}
+        snapshot_epoch: ${sp_epoch}
+        snapshot_scale: ${sp_scale}
+

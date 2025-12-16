@@ -1,0 +1,96 @@
+# zkUSD Liquidate Vault Spell
+# Liquidate an undercollateralized vault
+#
+# Based on MakerDAO Liquidations 2.0 + Liquity patterns:
+# - Dutch auction style (instant settlement)
+# - Stability Pool absorbs debt first
+# - Redistribution to other vaults if SP insufficient
+# - Liquidator bonus: 0.5% of collateral
+#
+# Reference: https://docs.makerdao.com/smart-contract-modules/dog-and-clipper-detailed-documentation
+# Reference: https://www.liquity.org/blog/comparison-series-liquity-protocol-vs-makerdao-pt-2
+#
+version: 8
+
+apps:
+  # Vault Manager NFT
+  $00: n/${vault_manager_app_id}/${vault_manager_vk}
+  # zkUSD Token
+  $01: t/${zkusd_app_id}/${zkusd_vk}
+  # Stability Pool NFT
+  $02: n/${stability_pool_app_id}/${stability_pool_vk}
+
+ins:
+  # Input 1: Undercollateralized vault to liquidate
+  - utxo_id: ${vault_utxo}
+    charms:
+      $00:
+        id: ${vault_id}
+        owner: ${vault_owner}
+        collateral: ${vault_collateral}
+        debt: ${vault_debt}
+        created_at: ${created_at}
+        last_updated: ${last_updated}
+        status: 0  # Active (will become Liquidated)
+        interest_rate_bps: ${interest_rate}
+        accrued_interest: ${accrued_interest}
+        redistributed_debt: ${redistributed_debt}
+        redistributed_collateral: ${redistributed_collateral}
+        insurance_balance: 0
+
+  # Input 2: Stability Pool state
+  - utxo_id: ${stability_pool_utxo}
+    charms:
+      $02:
+        total_zkusd: ${sp_total_zkusd}
+        total_btc: ${sp_total_btc}
+        product_p: ${sp_product_p}
+        sum_s: ${sp_sum_s}
+        current_epoch: ${sp_epoch}
+        current_scale: ${sp_scale}
+        depositor_count: ${sp_depositors}
+
+outs:
+  # Output 1: Liquidated vault (status = 3, zeroed out)
+  - address: ${vault_owner}
+    charms:
+      $00:
+        id: ${vault_id}
+        owner: ${vault_owner}
+        collateral: 0
+        debt: 0
+        created_at: ${created_at}
+        last_updated: ${current_block}
+        status: 3  # Liquidated
+        interest_rate_bps: ${interest_rate}
+        accrued_interest: 0
+        redistributed_debt: 0
+        redistributed_collateral: 0
+        insurance_balance: 0
+
+  # Output 2: Updated Stability Pool (absorbed debt, received collateral)
+  - address: ${stability_pool_address}
+    charms:
+      $02:
+        total_zkusd: ${sp_new_zkusd}       # sp_total_zkusd - debt_offset
+        total_btc: ${sp_new_btc}           # sp_total_btc + collateral_to_sp
+        product_p: ${sp_new_product_p}     # Updated for loss distribution
+        sum_s: ${sp_new_sum_s}             # Updated for BTC rewards
+        current_epoch: ${sp_new_epoch}
+        current_scale: ${sp_new_scale}
+        depositor_count: ${sp_depositors}
+
+  # Output 3: Liquidator bonus (0.5% of collateral)
+  - address: ${liquidator_address}
+    charms: {}
+    # BTC amount = vault_collateral * 0.5%
+
+  # Output 4: Gas compensation (200 zkUSD from GasPool)
+  - address: ${liquidator_address}
+    charms:
+      $01: 20000000000  # 200 zkUSD
+
+  # Output 5: Surplus to vault owner (if ICR > 110% in Recovery Mode)
+  - address: ${vault_owner}
+    charms: {}
+    # BTC amount = surplus_collateral (if any)

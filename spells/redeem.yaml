@@ -1,0 +1,103 @@
+# zkUSD Redeem Spell
+# Redeem zkUSD for BTC from lowest-interest-rate vaults
+#
+# Based on Liquity V2: Redemptions ordered by interest rate (not ICR)
+# Reference: https://docs.liquity.org/v2-faq/borrowing-and-liquidations#redemptions
+#
+# UTXO Advantage: Atomic redemption with multiple vaults in single spell
+# Redeemer pays: Redemption fee (0.5% base + dynamic component)
+#
+version: 8
+
+apps:
+  # Vault Manager NFT
+  $00: n/${vault_manager_app_id}/${vault_manager_vk}
+  # zkUSD Token
+  $01: t/${zkusd_app_id}/${zkusd_vk}
+
+ins:
+  # Input 1: zkUSD to redeem
+  - utxo_id: ${zkusd_utxo}
+    charms:
+      $01: ${redemption_amount}  # zkUSD with 8 decimals
+
+  # Input 2-N: Vaults to redeem from (ordered by interest rate, lowest first)
+  # Each vault provides BTC proportional to its share of the redemption
+  - utxo_id: ${vault_1_utxo}
+    charms:
+      $00:
+        id: ${vault_1_id}
+        owner: ${vault_1_owner}
+        collateral: ${vault_1_collateral}
+        debt: ${vault_1_debt}
+        created_at: ${vault_1_created}
+        last_updated: ${vault_1_updated}
+        status: 0
+        interest_rate_bps: ${vault_1_rate}  # Lowest rate gets redeemed first
+        accrued_interest: ${vault_1_interest}
+        redistributed_debt: ${vault_1_redist_debt}
+        redistributed_collateral: ${vault_1_redist_coll}
+        insurance_balance: ${vault_1_insurance}
+
+  # Additional vaults if redemption exceeds first vault's debt
+  - utxo_id: ${vault_2_utxo}
+    charms:
+      $00:
+        id: ${vault_2_id}
+        owner: ${vault_2_owner}
+        collateral: ${vault_2_collateral}
+        debt: ${vault_2_debt}
+        created_at: ${vault_2_created}
+        last_updated: ${vault_2_updated}
+        status: 0
+        interest_rate_bps: ${vault_2_rate}
+        accrued_interest: ${vault_2_interest}
+        redistributed_debt: ${vault_2_redist_debt}
+        redistributed_collateral: ${vault_2_redist_coll}
+        insurance_balance: ${vault_2_insurance}
+
+outs:
+  # Output 1: BTC to redeemer (minus redemption fee)
+  - address: ${redeemer_address}
+    charms: {}
+    # BTC amount = (redemption_amount / btc_price) * (1 - redemption_fee)
+
+  # Output 2: Updated vault 1 (reduced debt and collateral)
+  - address: ${vault_1_owner}
+    charms:
+      $00:
+        id: ${vault_1_id}
+        owner: ${vault_1_owner}
+        collateral: ${vault_1_new_collateral}  # Reduced by redeemed BTC
+        debt: ${vault_1_new_debt}              # Reduced by redeemed zkUSD
+        created_at: ${vault_1_created}
+        last_updated: ${current_block}
+        status: ${vault_1_new_status}          # 2 if fully redeemed (Closed)
+        interest_rate_bps: ${vault_1_rate}
+        accrued_interest: ${vault_1_new_interest}
+        redistributed_debt: ${vault_1_redist_debt}
+        redistributed_collateral: ${vault_1_redist_coll}
+        insurance_balance: ${vault_1_insurance}
+
+  # Output 3: Updated vault 2 (if applicable)
+  - address: ${vault_2_owner}
+    charms:
+      $00:
+        id: ${vault_2_id}
+        owner: ${vault_2_owner}
+        collateral: ${vault_2_new_collateral}
+        debt: ${vault_2_new_debt}
+        created_at: ${vault_2_created}
+        last_updated: ${current_block}
+        status: ${vault_2_new_status}
+        interest_rate_bps: ${vault_2_rate}
+        accrued_interest: ${vault_2_new_interest}
+        redistributed_debt: ${vault_2_redist_debt}
+        redistributed_collateral: ${vault_2_redist_coll}
+        insurance_balance: ${vault_2_insurance}
+
+  # Output 4: Redemption fee to protocol treasury
+  - address: ${treasury_address}
+    charms: {}
+    # BTC amount = redemption_fee_amount
+

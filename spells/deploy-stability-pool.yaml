@@ -1,0 +1,51 @@
+# zkUSD Stability Pool Deployment Spell
+# Creates an NFT charm with the initial Stability Pool state
+#
+# StabilityPool VK: ace2894585f8820a3b230ab57a24df35de1dd4b7234d9d38bde78fa643871752
+# App ID: c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf
+#
+# Dependencies:
+#   - Token VK: 7d1a06745a94adf1195fb9f2f987cb48b8c46b814f53167c619c9175cd406903
+#   - VaultManager VK: 56ff2636c4d11caeed8a90a608e7c067928e5368f3166d495b85be90af659c44
+
+version: 8
+
+apps:
+  # StabilityPool as NFT: n/{app_id}/{vk}
+  $00: n/c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf/ace2894585f8820a3b230ab57a24df35de1dd4b7234d9d38bde78fa643871752
+
+# Witness data - Initialize operation
+private_inputs:
+  $00:
+    # op code 0x00 = Initialize
+    op: 0
+    # Token VK (32 bytes)
+    zkusd_token_id: [125, 26, 6, 116, 90, 148, 173, 241, 25, 95, 185, 242, 249, 135, 203, 72, 184, 196, 107, 129, 79, 83, 22, 124, 97, 156, 145, 117, 205, 64, 105, 3]
+    # VaultManager VK (32 bytes)
+    vault_manager_id: [86, 255, 38, 54, 196, 209, 28, 174, 237, 138, 144, 166, 8, 231, 192, 103, 146, 142, 83, 104, 243, 22, 109, 73, 91, 133, 190, 144, 175, 101, 156, 68]
+    # Admin address (32 bytes)
+    admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+ins:
+  # Input UTXO from split transaction
+  - utxo_id: 7f0152ad9d97244f60e3fb680d35bd3268fa7634e5bf61055d4f28d6ad0e4420:2
+    charms: {}
+
+outs:
+  # Output with StabilityPool charm containing initial state
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $00:
+        # Combined config and state (StabilityPoolOutput)
+        config:
+          zkusd_token_id: [125, 26, 6, 116, 90, 148, 173, 241, 25, 95, 185, 242, 249, 135, 203, 72, 184, 196, 107, 129, 79, 83, 22, 124, 97, 156, 145, 117, 205, 64, 105, 3]
+          vault_manager_id: [86, 255, 38, 54, 196, 209, 28, 174, 237, 138, 144, 166, 8, 231, 192, 103, 146, 142, 83, 104, 243, 22, 109, 73, 91, 133, 190, 144, 175, 101, 156, 68]
+          admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        state:
+          total_zkusd: 0
+          total_btc: 0
+          product_p: 1000000000000000000
+          sum_s: 0
+          current_epoch: 0
+          current_scale: 0
+          depositor_count: 0

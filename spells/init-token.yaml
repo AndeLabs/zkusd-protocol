@@ -1,0 +1,50 @@
+# =============================================================================
+# zkUSD Token Initialization Spell
+# =============================================================================
+# Creates the Token state NFT with initial configuration.
+#
+# IMPORTANT:
+# - This creates a NEW Token with a new app_id (identity)
+# - The VaultManager must be deployed FIRST to get its app_id
+# - Set authorized_minter to the VaultManager's app_id
+#
+# Production VK (without debug output):
+#   355518c664be1dd7f9f9c283feb2c48adf3baa45c88e04324fb52fc11d625235
+#
+# After running this spell:
+# 1. Note the txid - this becomes part of the Token app_id
+# 2. Update VaultManager state with the new Token app_id
+# 3. Update open-vault spell with both new identities
+# =============================================================================
+
+version: 8
+
+apps:
+  # Token State NFT - identity derived from funding UTXO
+  # Format: n/{app_id}/{vk}
+  # NOTE: Replace ${funding_utxo_txid} with actual txid after funding
+  $TOKEN_STATE: n/${funding_utxo_txid}/355518c664be1dd7f9f9c283feb2c48adf3baa45c88e04324fb52fc11d625235
+
+# Witness for Initialize operation
+private_inputs:
+  $TOKEN_STATE:
+    op: 0  # OP_INITIALIZE
+    # VaultManager app_id - MUST be updated after VM is deployed
+    # This is the ONLY address authorized to mint/burn tokens
+    authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+ins:
+  # Funding UTXO (no charms) - REPLACE with actual UTXO
+  - utxo_id: ${funding_utxo}
+    charms: {}
+
+outs:
+  # Output: Token state NFT with initial state
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $TOKEN_STATE:
+        # VaultManager app_id - authorized to mint/burn
+        # MUST be updated with actual VM app_id after deployment
+        authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        # Initial supply is 0
+        total_supply: 0

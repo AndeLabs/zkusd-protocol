@@ -1,0 +1,29 @@
+# zkUSD Transfer Spell
+# Transfer zkUSD tokens between addresses
+#
+# UTXO Model: Consume input UTXO, create output UTXOs
+# No approval mechanism needed - UTXO ownership is direct
+#
+version: 8
+
+apps:
+  # zkUSD Token
+  $00: t/${zkusd_app_id}/${zkusd_vk}
+
+ins:
+  # Input 1: zkUSD to transfer
+  - utxo_id: ${zkusd_utxo}
+    charms:
+      $00: ${input_amount}  # Total zkUSD in this UTXO
+
+outs:
+  # Output 1: zkUSD to recipient
+  - address: ${recipient_address}
+    charms:
+      $00: ${transfer_amount}
+
+  # Output 2: Change back to sender (if any)
+  - address: ${sender_address}
+    charms:
+      $00: ${change_amount}  # input_amount - transfer_amount
+

@@ -1,0 +1,48 @@
+# zkUSD Close Vault Spell
+# Repay all debt and close vault, recovering collateral
+#
+# Requires: Sufficient zkUSD to repay entire debt + accrued interest
+# Result: Vault NFT is consumed (burned), collateral returned
+#
+version: 8
+
+apps:
+  # Vault Manager NFT
+  $00: n/${vault_manager_app_id}/${vault_manager_vk}
+  # zkUSD Token
+  $01: t/${zkusd_app_id}/${zkusd_vk}
+
+ins:
+  # Input 1: Vault NFT to close
+  - utxo_id: ${vault_utxo}
+    charms:
+      $00:
+        id: ${vault_id}
+        owner: ${owner_pubkey}
+        collateral: ${collateral}
+        debt: ${debt}
+        created_at: ${created_at}
+        last_updated: ${last_updated}
+        status: 0
+        interest_rate_bps: ${interest_rate}
+        accrued_interest: ${accrued_interest}
+        redistributed_debt: ${redistributed_debt}
+        redistributed_collateral: ${redistributed_collateral}
+        insurance_balance: ${insurance_balance}
+
+  # Input 2: zkUSD to repay entire debt
+  - utxo_id: ${zkusd_utxo}
+    charms:
+      $01: ${total_debt_to_repay}  # debt + accrued_interest + redistributed_debt
+
+outs:
+  # Output 1: Recovered collateral (all BTC returned to owner)
+  # Note: Vault NFT is NOT in outputs = burned/consumed
+  - address: ${owner_address}
+    charms: {}
+    # BTC amount = collateral + redistributed_collateral
+
+  # Output 2: Any excess zkUSD returned
+  - address: ${owner_address}
+    charms:
+      $01: ${excess_zkusd}  # If user sent more than needed

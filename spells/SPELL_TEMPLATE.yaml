@@ -1,0 +1,65 @@
+# ============================================================================
+#                    CHARMS SPELL TEMPLATE - zkUSD
+# ============================================================================
+#
+# ⚠️  CRITICAL: UTXO SEPARATION RULE ⚠️
+# ============================================================================
+#
+# When deploying spells, you MUST use TWO DIFFERENT UTXOs:
+#
+#   1. ins: UTXO_A    → The UTXO that will be "enchanted" (receives charm)
+#   2. --funding-utxo UTXO_B → SEPARATE UTXO to pay transaction fees
+#
+# ❌ WRONG (causes "conflict-in-package" error):
+#    ins: abc123:0  AND  --funding-utxo "abc123:0"
+#
+# ✅ CORRECT:
+#    ins: abc123:0  AND  --funding-utxo "def456:1"
+#
+# See: docs/CHARMS_DEPLOYMENT_FIX.md for full explanation
+# ============================================================================
+
+version: 8
+
+apps:
+  # Format: n/{app_id}/{vk}
+  # Get app_id/vk with: charms app vk <path_to_wasm>
+  $00: n/<app_id>/<vk>
+
+# Private inputs (witness data) - operation-specific
+private_inputs:
+  $00:
+    op: 0  # Operation code
+
+# ============================================================================
+# ins: UTXOs being spent - these get "transformed" into outs
+# ⚠️  MUST be DIFFERENT from --funding-utxo!
+# ============================================================================
+ins:
+  - utxo_id: <txid>:<vout>  # UTXO A - Different from funding!
+    charms: {}               # No existing charms (for deployment)
+
+# ============================================================================
+# outs: Output UTXOs - receive the charm data
+# ============================================================================
+outs:
+  - address: <recipient_address>
+    charms:
+      $00:
+        # Charm data structure here
+        field1: value1
+        field2: value2
+
+# ============================================================================
+# DEPLOYMENT COMMAND:
+# ============================================================================
+# charms spell prove \
+#   --spell spells/your-spell.yaml \
+#   --prev-txs "<raw_tx_of_ins_utxo>,<raw_tx_of_funding_utxo>" \
+#   --app-bins target/wasm32-wasip1/release/your-app.wasm \
+#   --funding-utxo "<DIFFERENT_UTXO_FROM_INS>" \    # ⚠️ DIFFERENT!
+#   --funding-utxo-value <value_sats> \
+#   --change-address "<your_address>" \
+#   --fee-rate 10.0 \
+#   --mock
+# ============================================================================

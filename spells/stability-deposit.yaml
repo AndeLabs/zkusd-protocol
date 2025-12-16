@@ -1,0 +1,79 @@
+# zkUSD Stability Pool Deposit Spell
+# Deposit zkUSD to stability pool for liquidation rewards
+#
+# Based on Liquity stability pool mechanism:
+# - Depositors absorb liquidated debt
+# - Receive proportional collateral (BTC) from liquidations
+# - Compounding rewards via P (product) and S (sum) accumulators
+#
+# Reference: https://github.com/liquity/dev/blob/main/packages/contracts/contracts/StabilityPool.sol
+#
+version: 8
+
+apps:
+  # zkUSD Token
+  $00: t/${zkusd_app_id}/${zkusd_vk}
+  # Stability Pool NFT (singleton state)
+  $01: n/${stability_pool_app_id}/${stability_pool_vk}
+  # Depositor Position NFT
+  $02: n/${depositor_nft_app_id}/${depositor_nft_vk}
+
+ins:
+  # Input 1: zkUSD to deposit
+  - utxo_id: ${zkusd_utxo}
+    charms:
+      $00: ${deposit_amount}
+
+  # Input 2: Current stability pool state
+  - utxo_id: ${stability_pool_utxo}
+    charms:
+      $01:
+        total_zkusd: ${sp_total_zkusd}
+        total_btc: ${sp_total_btc}
+        product_p: ${sp_product_p}
+        sum_s: ${sp_sum_s}
+        current_epoch: ${sp_epoch}
+        current_scale: ${sp_scale}
+        depositor_count: ${sp_depositors}
+
+  # Input 3: Existing depositor position (if updating existing deposit)
+  # Optional - omit for new deposit
+  - utxo_id: ${depositor_utxo}
+    charms:
+      $02:
+        depositor: ${depositor_pubkey}
+        initial_deposit: ${existing_deposit}
+        snapshot_p: ${snapshot_p}
+        snapshot_s: ${snapshot_s}
+        snapshot_epoch: ${snapshot_epoch}
+        snapshot_scale: ${snapshot_scale}
+
+outs:
+  # Output 1: Updated stability pool state
+  - address: ${stability_pool_address}
+    charms:
+      $01:
+        total_zkusd: ${sp_new_total}      # sp_total_zkusd + deposit_amount
+        total_btc: ${sp_total_btc}
+        product_p: ${sp_product_p}
+        sum_s: ${sp_sum_s}
+        current_epoch: ${sp_epoch}
+        current_scale: ${sp_scale}
+        depositor_count: ${sp_new_count}  # +1 if new depositor
+
+  # Output 2: Depositor position NFT
+  - address: ${depositor_address}
+    charms:
+      $02:
+        depositor: ${depositor_pubkey}
+        initial_deposit: ${new_deposit}   # existing + new deposit
+        snapshot_p: ${sp_product_p}       # Capture current P
+        snapshot_s: ${sp_sum_s}           # Capture current S
+        snapshot_epoch: ${sp_epoch}
+        snapshot_scale: ${sp_scale}
+
+  # Output 3: Claimed BTC rewards (if updating existing position)
+  - address: ${depositor_address}
+    charms: {}
+    # BTC amount = accumulated rewards since last snapshot
+

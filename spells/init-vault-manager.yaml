@@ -1,0 +1,63 @@
+# =============================================================================
+# zkUSD Vault Manager Initialization Spell
+# =============================================================================
+# Creates the VaultManager state NFT with initial protocol configuration.
+#
+# IMPORTANT: This creates a NEW VaultManager with a new app_id (identity).
+# The identity is derived from the funding UTXO used.
+#
+# Production VK (without debug output):
+#   3a6a02f4fe4b4b61f03018cabb7995240799fac45323ff766f9ecc3398bb7874
+#
+# After running this spell:
+# 1. Note the txid of the output - this becomes part of the app_id
+# 2. Update other spells with the new VaultManager identity
+# =============================================================================
+
+version: 8
+
+apps:
+  # VaultManager NFT - identity will be derived from the funding UTXO
+  # Format: n/{app_id}/{vk}
+  # NOTE: Replace ${funding_utxo_txid} with actual txid after funding
+  $VM: n/${funding_utxo_txid}/3a6a02f4fe4b4b61f03018cabb7995240799fac45323ff766f9ecc3398bb7874
+
+# Witness for Initialize operation
+private_inputs:
+  $VM:
+    op: 0  # OP_INITIALIZE
+    admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    # Token app_id - will be updated after Token is deployed
+    zkusd_token_id: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    # Stability Pool app_id
+    stability_pool_id: [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191]
+    # Price Oracle app_id
+    price_oracle_id: [138, 164, 245, 5, 203, 62, 111, 127, 141, 127, 85, 62, 81, 125, 192, 193, 97, 253, 102, 44, 229, 108, 233, 65, 42, 213, 221, 0, 153, 27, 30, 242]
+    # Pool addresses
+    active_pool: [172, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    default_pool: [222, 250, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+ins:
+  # Funding UTXO (no charms) - REPLACE with actual UTXO
+  - utxo_id: ${funding_utxo}
+    charms: {}
+
+outs:
+  # Output: VaultManager state NFT with initial protocol state
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $VM:
+        protocol:
+          total_collateral: 0
+          total_debt: 0
+          active_vault_count: 0
+          base_rate: 50
+          last_fee_update_block: 0
+          admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          is_paused: false
+        # Token app_id - will be updated after Token is deployed
+        zkusd_token_id: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        stability_pool_id: [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191]
+        price_oracle_id: [138, 164, 245, 5, 203, 62, 111, 127, 141, 127, 85, 62, 81, 125, 192, 193, 97, 253, 102, 44, 229, 108, 233, 65, 42, 213, 221, 0, 153, 27, 30, 242]
+        active_pool: [172, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        default_pool: [222, 250, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

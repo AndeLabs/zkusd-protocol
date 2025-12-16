@@ -1,0 +1,67 @@
+# zkUSD Adjust Vault Spell
+# Add/withdraw collateral and mint/repay debt in single atomic operation
+#
+# UTXO Advantage: All adjustments happen atomically
+# No partial state - either all changes apply or none
+#
+version: 8
+
+apps:
+  # Vault Manager NFT
+  $00: n/${vault_manager_app_id}/${vault_manager_vk}
+  # zkUSD Token
+  $01: t/${zkusd_app_id}/${zkusd_vk}
+
+ins:
+  # Input 1: Existing vault NFT
+  - utxo_id: ${vault_utxo}
+    charms:
+      $00:
+        id: ${vault_id}
+        owner: ${owner_pubkey}
+        collateral: ${old_collateral}
+        debt: ${old_debt}
+        created_at: ${created_at}
+        last_updated: ${old_updated}
+        status: 0
+        interest_rate_bps: ${interest_rate}
+        accrued_interest: ${old_interest}
+        redistributed_debt: ${redistributed_debt}
+        redistributed_collateral: ${redistributed_collateral}
+        insurance_balance: ${insurance_balance}
+
+  # Input 2: Additional BTC for collateral (if adding)
+  - utxo_id: ${btc_utxo}
+    charms: {}
+
+  # Input 3: zkUSD for debt repayment (if repaying)
+  - utxo_id: ${zkusd_utxo}
+    charms:
+      $01: ${zkusd_for_repay}
+
+outs:
+  # Output 1: Updated vault NFT
+  - address: ${owner_address}
+    charms:
+      $00:
+        id: ${vault_id}
+        owner: ${owner_pubkey}
+        collateral: ${new_collateral}         # old + add - withdraw
+        debt: ${new_debt}                     # old + mint - repay
+        created_at: ${created_at}
+        last_updated: ${current_block}
+        status: 0
+        interest_rate_bps: ${interest_rate}
+        accrued_interest: ${new_interest}     # Updated with time
+        redistributed_debt: ${redistributed_debt}
+        redistributed_collateral: ${redistributed_collateral}
+        insurance_balance: ${insurance_balance}
+
+  # Output 2: Minted zkUSD (if minting more debt)
+  - address: ${owner_address}
+    charms:
+      $01: ${minted_zkusd}
+
+  # Output 3: Withdrawn BTC (if withdrawing collateral)
+  - address: ${owner_address}
+    charms: {}

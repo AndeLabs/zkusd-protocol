@@ -1,0 +1,125 @@
+# zkUSD Insurance Trigger Spell
+# Trigger insurance protection when vault approaches liquidation
+#
+# Instead of liquidation:
+# 1. Insurance pays down vault debt
+# 2. Vault ICR improves above liquidation threshold
+# 3. Coverage remaining decreases
+# 4. Vault owner keeps position
+#
+# Can be triggered by:
+# - Vault owner (proactive protection)
+# - Anyone (if vault is below trigger threshold)
+
+version: 8
+
+apps:
+  # Vault Manager NFT
+  $00: n/${vault_manager_app_id}/${vault_manager_vk}
+  # zkUSD Token
+  $01: t/${zkusd_app_id}/${zkusd_vk}
+  # Insurance Charm NFT
+  $02: n/${insurance_app_id}/${insurance_vk}
+  # Insurance Pool
+  $03: n/${insurance_pool_app_id}/${insurance_pool_vk}
+
+ins:
+  # Input 1: Distressed vault
+  - utxo_id: ${vault_utxo}
+    charms:
+      $00:
+        id: ${vault_id}
+        owner: ${vault_owner}
+        collateral: ${vault_collateral}
+        debt: ${vault_debt}
+        created_at: ${created_at}
+        last_updated: ${last_updated}
+        status: 0
+        interest_rate_bps: ${interest_rate}
+        accrued_interest: ${accrued_interest}
+        redistributed_debt: ${redistributed_debt}
+        redistributed_collateral: ${redistributed_collateral}
+        insurance_balance: ${insurance_balance}
+
+  # Input 2: Insurance Charm for this vault
+  - utxo_id: ${insurance_utxo}
+    charms:
+      $02:
+        policy_id: ${policy_id}
+        vault_id: ${vault_id}
+        coverage_amount: ${coverage_amount}
+        premium_paid: ${premium_paid}
+        start_block: ${start_block}
+        expiry_block: ${expiry_block}
+        coverage_remaining: ${coverage_remaining}
+        status: 0  # Active
+
+  # Input 3: Insurance pool (provides zkUSD for debt payment)
+  - utxo_id: ${insurance_pool_utxo}
+    charms:
+      $03:
+        total_coverage: ${pool_total_coverage}
+        total_premiums: ${pool_total_premiums}
+        active_policies: ${pool_active_policies}
+        claims_paid: ${pool_claims_paid}
+        reserve_ratio: ${pool_reserve_ratio}
+
+  # Input 4: zkUSD from insurance pool reserves
+  - utxo_id: ${pool_zkusd_utxo}
+    charms:
+      $01: ${pool_zkusd_balance}
+
+outs:
+  # Output 1: Rescued vault (debt reduced by claim amount)
+  - address: ${vault_owner}
+    charms:
+      $00:
+        id: ${vault_id}
+        owner: ${vault_owner}
+        collateral: ${vault_collateral}  # Unchanged
+        debt: ${new_debt}                # vault_debt - claim_amount
+        created_at: ${created_at}
+        last_updated: ${current_block}
+        status: 0  # Still Active
+        interest_rate_bps: ${interest_rate}
+        accrued_interest: ${new_interest}
+        redistributed_debt: ${redistributed_debt}
+        redistributed_collateral: ${redistributed_collateral}
+        insurance_balance: ${new_insurance_balance}  # Reduced
+
+  # Output 2: Updated insurance charm (coverage reduced)
+  # Omit if coverage fully used (NFT burned)
+  - address: ${vault_owner}
+    charms:
+      $02:
+        policy_id: ${policy_id}
+        vault_id: ${vault_id}
+        coverage_amount: ${coverage_amount}
+        premium_paid: ${premium_paid}
+        start_block: ${start_block}
+        expiry_block: ${expiry_block}
+        coverage_remaining: ${new_coverage}  # coverage_remaining - claim_amount
+        status: ${new_status}  # 0 if active, 1 if exhausted
+
+  # Output 3: Updated insurance pool
+  - address: ${insurance_pool_address}
+    charms:
+      $03:
+        total_coverage: ${new_pool_coverage}     # - claim_amount
+        total_premiums: ${pool_total_premiums}
+        active_policies: ${new_active}           # -1 if policy exhausted
+        claims_paid: ${new_claims_paid}          # + claim_amount
+        reserve_ratio: ${new_reserve_ratio}
+
+  # Output 4: Remaining pool zkUSD
+  - address: ${insurance_pool_address}
+    charms:
+      $01: ${remaining_pool_zkusd}  # pool_zkusd_balance - claim_amount
+
+# Validation Rules:
+# 1. Vault ICR must be below trigger threshold (e.g., 115%)
+# 2. Insurance charm must match vault_id
+# 3. current_block < expiry_block
+# 4. claim_amount <= coverage_remaining
+# 5. New vault ICR must be >= MIN_COLLATERAL_RATIO (110%)
+

@@ -1,0 +1,44 @@
+# zkUSD Price Oracle Deployment Spell - LIVE
+# ===========================================
+# Generated: 15 Dec 2024
+#
+# Oracle VK: b44db07ac1697704ea7170f4e857c50c4545f0de00dfcc11835dc6efb0c27c32
+# App ID: 8aa4f505cb3e6f7f8d7f553e517dc0c161fd662ce56ce9412ad5dd00991b1ef2
+#   (SHA256 of 7f0152ad9d97244f60e3fb680d35bd3268fa7634e5bf61055d4f28d6ad0e4420:3)
+#
+# ins UTXO: 7f0152ad...4420:3 (60,000 sats)
+# funding:  7f0152ad...4420:5 (60,000 sats)
+#
+# Initial Price: $104,000 USD (current BTC price)
+
+version: 8
+
+apps:
+  # Oracle as NFT: n/{app_id}/{vk}
+  $00: n/8aa4f505cb3e6f7f8d7f553e517dc0c161fd662ce56ce9412ad5dd00991b1ef2/b44db07ac1697704ea7170f4e857c50c4545f0de00dfcc11835dc6efb0c27c32
+
+# Witness data - Initialize operation
+private_inputs:
+  $00:
+    op: 0
+    admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    operator: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    price: 10400000000000
+
+ins:
+  - utxo_id: 7f0152ad9d97244f60e3fb680d35bd3268fa7634e5bf61055d4f28d6ad0e4420:3
+    charms: {}
+
+outs:
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $00:
+        price:
+          price: 10400000000000
+          timestamp_block: 0
+          source: Mock
+          confidence: 100
+        operator: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        is_active: true
+        last_valid_price: 10400000000000

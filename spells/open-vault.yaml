@@ -1,0 +1,50 @@
+# zkUSD Open Vault Spell
+# Creates a new vault NFT with initial collateral and debt
+#
+# Based on Liquity V2 pattern: Vaults (Troves) as NFTs
+# Reference: https://docs.liquity.org/v2-faq/borrowing-and-liquidations
+#
+version: 8
+
+apps:
+  # Vault Manager as NFT: n/{app_id}/{vk}
+  $00: n/${vault_manager_app_id}/${vault_manager_vk}
+  # zkUSD Token: t/{app_id}/{vk}
+  $01: t/${zkusd_app_id}/${zkusd_vk}
+
+# Witness data - UTXO for vault ID generation (hash of this becomes vault ID)
+private_inputs:
+  $00: "${funding_utxo}"
+
+ins:
+  # Funding UTXO with BTC collateral
+  - utxo_id: ${funding_utxo}
+    charms: {}
+
+outs:
+  # Output 1: New Vault NFT with state
+  - address: ${owner_address}
+    charms:
+      $00:
+        # Vault state (based on types.rs Vault struct)
+        id: ${vault_id}
+        owner: ${owner_pubkey}
+        collateral: ${collateral_sats}        # BTC in satoshis
+        debt: ${debt_amount}                  # zkUSD with 8 decimals
+        created_at: ${current_block}
+        last_updated: ${current_block}
+        status: 0                             # 0 = Active
+        interest_rate_bps: ${interest_rate}   # e.g., 100 = 1% APR
+        accrued_interest: 0
+        redistributed_debt: 0
+        redistributed_collateral: 0
+        insurance_balance: 0
+
+  # Output 2: Minted zkUSD tokens to owner
+  - address: ${owner_address}
+    charms:
+      $01: ${debt_amount}
+
+  # Output 3: Change (remaining BTC after collateral)
+  - address: ${owner_address}
+    charms: {}
