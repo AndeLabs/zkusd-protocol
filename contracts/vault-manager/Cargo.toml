@@ -1,0 +1,30 @@
+[package]
+name = "zkusd-vault-manager"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Vault Manager for zkUSD CDP protocol - manages collateralized debt positions on Bitcoin"
+keywords = ["bitcoin", "defi", "cdp", "stablecoin", "charms"]
+categories = ["cryptography::cryptocurrencies"]
+
+[features]
+default = []
+charms = ["charms-sdk", "charms-data"]
+
+[dependencies]
+zkusd-common = { workspace = true }
+serde = { workspace = true }
+borsh = { workspace = true }
+sha2 = { workspace = true }
+
+# Charms SDK (optional, enabled with "charms" feature)
+charms-sdk = { workspace = true, optional = true }
+charms-data = { workspace = true, optional = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "zkusd-vault-manager-app"
+path = "src/main.rs"
+required-features = ["charms"]
