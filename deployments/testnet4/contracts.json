@@ -1,0 +1,28 @@
+{
+  "network": "testnet4",
+  "deployed_at": null,
+  "charms_version": "0.10.0",
+  "contracts": {
+    "price_oracle": {
+      "wasm": "target/wasm32-wasip1/release/zkusd-price-oracle-app.wasm",
+      "vk": "b28d5bbc747e0adf79403b4dd00b91b9afe8935ba6e43c49c32e88c79ef1a2b7"
+    },
+    "vault_manager": {
+      "wasm": "target/wasm32-wasip1/release/zkusd-vault-manager-app.wasm",
+      "vk": "fa4dd79f522f1904e92b95d559d3e2bbbca1300c78518bf02317865aa3fb233b"
+    },
+    "zkusd_token": {
+      "wasm": "target/wasm32-wasip1/release/zkusd-token-app.wasm",
+      "vk": "d1564fbc8acdc3feec12916088d3a73a6b0f901d90ef34102b646d0754665ab0"
+    },
+    "stability_pool": {
+      "wasm": "target/wasm32-wasip1/release/zkusd-stability-pool-app.wasm",
+      "vk": "16965b07571c5e98d14dae252f693642b030c02cf4ab662cbc7c3953a2f70118"
+    }
+  },
+  "funding": {
+    "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
+    "utxo": "d629a85353048e869baf09f80b21ae1a668f1a333eddd46fc22c17aa811aac6a:0",
+    "value_sats": 500000
+  }
+}
