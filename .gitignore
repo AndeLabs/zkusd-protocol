@@ -1,0 +1,30 @@
+# Build artifacts
+/target/
+*.wasm
+
+# Dependencies
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Test artifacts
+test-results.log
+
+# Claude/AI
+.claude/

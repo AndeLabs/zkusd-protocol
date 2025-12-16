@@ -1,0 +1,35 @@
+# Cargo configuration for zkUSD Protocol
+# WASM and optimization settings
+
+[build]
+# Default target for apps (WASM for Charms deployment)
+# Uncomment for WASM builds:
+# target = "wasm32-unknown-unknown"
+
+[target.wasm32-unknown-unknown]
+# Optimize for size in WASM builds
+rustflags = [
+    "-C", "link-arg=-zstack-size=32768",
+    "-C", "opt-level=z",
+]
+
+[profile.release]
+# Maximum optimization for size
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+# Optimize for WASM
+overflow-checks = false
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false
+
+[alias]
+# Convenient aliases for zkUSD development
+build-wasm = "build --target wasm32-unknown-unknown --release --features charms"
+build-all-wasm = "build --target wasm32-unknown-unknown --release --features charms --workspace"
+test-all = "test --release --workspace"

@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = [
+    "contracts/common",
+    "contracts/zkusd-token",
+    "contracts/vault-manager",
+    "contracts/stability-pool",
+    "contracts/price-oracle",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["zkUSD Team"]
+repository = "https://github.com/zkusd/zkusd-protocol"
+
+[workspace.dependencies]
+# Charms SDK for Bitcoin ZK apps
+charms-sdk = "0.10"
+charms-data = "0.10"
+
+# Serialization
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+borsh = { version = "1.5", default-features = false, features = ["derive"] }
+ciborium = { version = "0.2", default-features = false }
+
+# Crypto
+sha2 = { version = "0.10", default-features = false }
+
+# Internal crates
+zkusd-common = { path = "contracts/common" }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
