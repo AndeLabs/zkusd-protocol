@@ -1,0 +1,30 @@
+[package]
+name = "zkusd-price-oracle"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Price Oracle for zkUSD protocol - BTC/USD price feed on Bitcoin"
+keywords = ["bitcoin", "defi", "oracle", "price-feed", "charms"]
+categories = ["cryptography::cryptocurrencies"]
+
+[features]
+default = []
+charms = ["charms-sdk", "charms-data"]
+
+[dependencies]
+zkusd-common = { workspace = true }
+serde = { workspace = true }
+borsh = { workspace = true }
+sha2 = { workspace = true }
+
+# Charms SDK (optional, enabled with "charms" feature)
+charms-sdk = { workspace = true, optional = true }
+charms-data = { workspace = true, optional = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "zkusd-price-oracle-app"
+path = "src/main.rs"
+required-features = ["charms"]
