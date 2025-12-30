@@ -5,7 +5,6 @@ contracts/**/target/
 # Dependencies
 node_modules
 .pnpm-store
-pnpm-lock.yaml
 
 # Build outputs
 dist
