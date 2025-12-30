@@ -1,0 +1,21 @@
+{
+  "name": "@zkusd/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Network and deployment configuration for zkUSD",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./networks": "./src/networks.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@zkusd/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,28 @@
+# Deploy fresh zkUSD Token with correct authorized_minter
+# Generated: 2024-12-28
+#
+# Token App ID: c2ab90a913767011f16206c4c7bae010d3e75072d277c1d67cbfa52cac81a77f
+# Token VK: e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe
+# authorized_minter: VM App ID = 0dcae65e36235a17f2228c24037572e51e452176e62e90888c35021ae9ff5e38
+
+version: 8
+
+apps:
+  $TOKEN: n/c2ab90a913767011f16206c4c7bae010d3e75072d277c1d67cbfa52cac81a77f/e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe
+
+private_inputs:
+  $TOKEN:
+    op: 0
+    # VM App ID as authorized_minter
+    authorized_minter: [13, 202, 230, 94, 54, 35, 90, 23, 242, 34, 140, 36, 3, 117, 114, 229, 30, 69, 33, 118, 230, 46, 144, 136, 140, 53, 2, 26, 233, 255, 94, 56]
+
+ins:
+  - utxo_id: d1a2b43c27711f4aabaf2dc9d8c933ed32b10a68764c85a60fb6244e4aa6ec56:0
+    charms: {}
+
+outs:
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $TOKEN:
+        authorized_minter: [13, 202, 230, 94, 54, 35, 90, 23, 242, 34, 140, 36, 3, 117, 114, 229, 30, 69, 33, 118, 230, 46, 144, 136, 140, 53, 2, 26, 233, 255, 94, 56]
+        total_supply: 0

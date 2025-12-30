@@ -1,0 +1,30 @@
+{
+  "name": "zkusd",
+  "version": "0.1.0",
+  "private": true,
+  "description": "zkUSD - Bitcoin-native stablecoin protocol",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "build:contracts": "cargo build --release --target wasm32-wasip1",
+    "lint": "turbo run lint",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "husky": "^9.1.7",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.15.1",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -79,12 +79,15 @@ pub mod fees {
 pub mod limits {
     use super::token::ONE;
 
-    /// Minimum debt to open a vault (2,000 zkUSD)
-    /// Prevents dust vaults and ensures liquidation profitability
-    pub const MIN_DEBT: u64 = 2_000 * ONE;
+    /// Minimum debt to open a vault
+    /// TESTNET: 10 zkUSD (reduced for easier testing with limited faucet BTC)
+    /// MAINNET: Should be 2,000 zkUSD for liquidation profitability
+    pub const MIN_DEBT: u64 = 10 * ONE;
 
-    /// Liquidation reserve (200 zkUSD) - gas compensation for liquidators
-    pub const LIQUIDATION_RESERVE: u64 = 200 * ONE;
+    /// Liquidation reserve - gas compensation for liquidators
+    /// TESTNET: 2 zkUSD (reduced proportionally)
+    /// MAINNET: Should be 200 zkUSD
+    pub const LIQUIDATION_RESERVE: u64 = 2 * ONE;
 
     /// Maximum debt per vault (prevents concentration risk)
     pub const MAX_DEBT_PER_VAULT: u64 = 10_000_000 * ONE; // 10M zkUSD
@@ -107,8 +110,10 @@ pub mod stability_pool {
     /// Scale factor for precision in reward calculations
     pub const SCALE_FACTOR: u128 = 1_000_000_000_000_000_000; // 1e18
 
-    /// Minimum deposit to earn rewards (100 zkUSD)
-    pub const MIN_DEPOSIT: u64 = 100 * super::token::ONE;
+    /// Minimum deposit to earn rewards
+    /// TESTNET: 1 zkUSD (reduced for testing)
+    /// MAINNET: Should be 100 zkUSD
+    pub const MIN_DEPOSIT: u64 = 1 * super::token::ONE;
 }
 
 /// Liquidation Configuration
@@ -164,11 +169,15 @@ pub mod pcv {
 pub mod gas_pool {
     use super::token::ONE;
 
-    /// Gas compensation per liquidation (200 zkUSD)
-    pub const GAS_COMPENSATION: u64 = 200 * ONE;
+    /// Gas compensation per liquidation
+    /// TESTNET: 2 zkUSD (reduced for testing)
+    /// MAINNET: Should be 200 zkUSD
+    pub const GAS_COMPENSATION: u64 = 2 * ONE;
 
     /// Gas buffer added to each vault at opening
-    pub const VAULT_GAS_BUFFER: u64 = 200 * ONE;
+    /// TESTNET: 2 zkUSD (reduced for testing)
+    /// MAINNET: Should be 200 zkUSD
+    pub const VAULT_GAS_BUFFER: u64 = 2 * ONE;
 }
 
 /// Redistribution Configuration

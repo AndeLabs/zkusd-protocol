@@ -486,22 +486,36 @@ fn extract_vaults(
         None => return (None, None),
     };
 
-    // Find input vault matching ID
+    // Find input vault matching ID - search by tag and identity (VK may differ)
     let input_vault = tx.ins.iter()
         .find_map(|(_, charms)| {
-            charms.get(app).and_then(|data| {
-                let v: Vault = data.value().ok()?;
-                if v.id == vault_id { Some(v) } else { None }
-            })
+            for (charm_app, data) in charms.iter() {
+                // Match by tag and identity only
+                if charm_app.tag == app.tag && charm_app.identity == app.identity {
+                    if let Ok(v) = data.value::<Vault>() {
+                        if v.id == vault_id {
+                            return Some(v);
+                        }
+                    }
+                }
+            }
+            None
         });
 
-    // Find output vault matching ID
+    // Find output vault matching ID - search by tag and identity (VK may differ)
     let output_vault = tx.outs.iter()
         .find_map(|charms| {
-            charms.get(app).and_then(|data| {
-                let v: Vault = data.value().ok()?;
-                if v.id == vault_id { Some(v) } else { None }
-            })
+            for (charm_app, data) in charms.iter() {
+                // Match by tag and identity only
+                if charm_app.tag == app.tag && charm_app.identity == app.identity {
+                    if let Ok(v) = data.value::<Vault>() {
+                        if v.id == vault_id {
+                            return Some(v);
+                        }
+                    }
+                }
+            }
+            None
         });
 
     (input_vault, output_vault)

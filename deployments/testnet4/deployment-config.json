@@ -3,29 +3,33 @@
   "charms_version": 8,
   "charms_sdk_version": "0.10.0",
   "deployment_date": "2024-12-15",
-  "last_updated": "2024-12-16",
+  "last_updated": "2024-12-28",
   "status": "deployed",
   "phase": "hackathon_mvp",
+  "note": "V2 REDEPLOYMENT - Token and VM with correct cross-references (App IDs, not VKs)",
 
   "contracts": {
     "price_oracle": {
-      "vk": "b44db07ac1697704ea7170f4e857c50c4545f0de00dfcc11835dc6efb0c27c32",
-      "app_id": "8aa4f505cb3e6f7f8d7f553e517dc0c161fd662ce56ce9412ad5dd00991b1ef2",
-      "spell_tx": "e4aeedcc32c72a2e09e29744b7ab5c10224dca8a8a5374a98363b4ad9602b977",
+      "vk": "98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d",
+      "app_id": "26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5",
+      "spell_tx": "03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4",
       "wasm": "target/wasm32-wasip1/release/zkusd-price-oracle-app.wasm",
-      "initial_price": 10400000000000
+      "initial_price": 10400000000000,
+      "note": "Redeployed 2024-12-28 with fixed PriceSource serialization"
     },
     "zkusd_token": {
-      "vk": "7d1a06745a94adf1195fb9f2f987cb48b8c46b814f53167c619c9175cd406903",
-      "app_id": "a6b3570c84064d72dc6687d0309154469efa6a427fd3c1691e656d6172455c82",
-      "spell_tx": "4ec30b16e45b20341586e690f282314d24a5696dde50b80ef02905b1fae8713e",
-      "wasm": "target/wasm32-wasip1/release/zkusd-token-app.wasm"
+      "vk": "e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe",
+      "app_id": "eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540",
+      "spell_tx": "458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423",
+      "wasm": "/tmp/zkusd-token-standalone/target/wasm32-wasip1/release/zkusd-token-app.wasm",
+      "note": "V2 Redeployed 2024-12-28 - authorized_minter = VM App ID (correct cross-reference)"
     },
     "vault_manager": {
-      "vk": "56ff2636c4d11caeed8a90a608e7c067928e5368f3166d495b85be90af659c44",
-      "app_id": "3ce7c8f65b55f2e66f25370f951abfc49af6980d63969f9368f0b5bb1cf878d0",
-      "spell_tx": "a6dfdfaa1834eca1203f871f535aa33d2d197518c485e1d7c6dac4ad1b55a7a9",
-      "wasm": "target/wasm32-wasip1/release/zkusd-vault-manager-app.wasm"
+      "vk": "d535fdc354e87af6e750bfe957a4a90e467eba1457f37f05c858beaf09e763bf",
+      "app_id": "c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490",
+      "spell_tx": "b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3",
+      "wasm": "/tmp/zkusd-vm-standalone/target/wasm32-wasip1/release/zkusd-vault-manager-app.wasm",
+      "note": "V2 Redeployed 2024-12-28 - zkusd_token_id = Token App ID (correct cross-reference)"
     },
     "stability_pool": {
       "vk": "ace2894585f8820a3b230ab57a24df35de1dd4b7234d9d38bde78fa643871752",
@@ -42,29 +46,51 @@
   },
 
   "app_refs": {
-    "price_oracle": "n/8aa4f505cb3e6f7f8d7f553e517dc0c161fd662ce56ce9412ad5dd00991b1ef2/b44db07ac1697704ea7170f4e857c50c4545f0de00dfcc11835dc6efb0c27c32",
-    "token_nft": "n/a6b3570c84064d72dc6687d0309154469efa6a427fd3c1691e656d6172455c82/7d1a06745a94adf1195fb9f2f987cb48b8c46b814f53167c619c9175cd406903",
-    "token_fungible": "t/a6b3570c84064d72dc6687d0309154469efa6a427fd3c1691e656d6172455c82/7d1a06745a94adf1195fb9f2f987cb48b8c46b814f53167c619c9175cd406903",
-    "vault_manager": "n/3ce7c8f65b55f2e66f25370f951abfc49af6980d63969f9368f0b5bb1cf878d0/56ff2636c4d11caeed8a90a608e7c067928e5368f3166d495b85be90af659c44",
+    "price_oracle": "n/26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5/98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d",
+    "token_nft": "n/eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540/e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe",
+    "token_fungible": "t/eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540/e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe",
+    "vault_manager": "n/c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490/d535fdc354e87af6e750bfe957a4a90e467eba1457f37f05c858beaf09e763bf",
     "stability_pool": "n/c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf/ace2894585f8820a3b230ab57a24df35de1dd4b7234d9d38bde78fa643871752"
+  },
+
+  "vk_bytes": {
+    "_note": "VKs are used in app definitions (n/{app_id}/{vk}), NOT for cross-references!",
+    "token": [224, 86, 223, 236, 154, 234, 129, 211, 60, 174, 213, 71, 12, 81, 194, 248, 107, 182, 85, 26, 206, 212, 197, 112, 182, 108, 189, 195, 89, 66, 117, 254],
+    "vault_manager": [213, 53, 253, 195, 84, 232, 122, 246, 231, 80, 191, 233, 87, 164, 169, 14, 70, 126, 186, 20, 87, 243, 127, 5, 200, 88, 190, 175, 9, 231, 99, 191],
+    "stability_pool": [172, 226, 137, 69, 133, 248, 130, 10, 59, 35, 10, 181, 122, 36, 223, 53, 222, 29, 212, 183, 35, 77, 157, 56, 189, 231, 143, 166, 67, 135, 23, 82],
+    "oracle": [152, 178, 238, 235, 55, 80, 28, 159, 111, 129, 89, 19, 200, 9, 53, 189, 70, 185, 50, 133, 18, 87, 14, 240, 103, 195, 208, 35, 121, 244, 199, 61]
+  },
+
+  "app_id_bytes": {
+    "_note": "App IDs (app.identity.0) - USE THESE for cross-references in state!",
+    "token": [235, 107, 174, 4, 158, 243, 102, 222, 8, 24, 134, 244, 247, 18, 190, 110, 62, 185, 145, 201, 39, 41, 170, 228, 217, 250, 182, 128, 162, 154, 213, 64],
+    "vault_manager": [193, 196, 122, 179, 42, 112, 127, 159, 173, 63, 87, 170, 9, 197, 128, 32, 208, 197, 206, 67, 242, 78, 229, 253, 12, 34, 190, 65, 17, 76, 212, 144],
+    "stability_pool": [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191],
+    "oracle": [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
   },
 
   "protocol_params": {
     "mcr": 11000,
     "ccr": 15000,
-    "min_debt": 200000000000,
-    "gas_compensation": 20000000000,
+    "min_debt": 1000000000,
+    "min_debt_zkusd": 10,
+    "gas_compensation": 200000000,
+    "gas_compensation_zkusd": 2,
     "liquidation_bonus_bps": 50,
     "redemption_fee_floor_bps": 50,
     "scale_factor": "1000000000000000000"
   },
 
   "initial_state": {
+    "_note": "V2 deployment with CORRECT cross-references using App IDs",
     "token": {
-      "authorized_minter_vk": "56ff2636c4d11caeed8a90a608e7c067928e5368f3166d495b85be90af659c44",
+      "authorized_minter": "c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490",
+      "authorized_minter_note": "This is VM App ID (correct!)",
       "total_supply": 0
     },
     "vault_manager": {
+      "zkusd_token_id": "eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540",
+      "zkusd_token_id_note": "This is Token App ID (correct!)",
       "total_collateral": 0,
       "total_debt": 0,
       "active_vault_count": 0,
@@ -80,101 +106,50 @@
   },
 
   "cross_references": {
-    "token_authorized_minter": "vault_manager.vk",
-    "vault_manager_token_id": "zkusd_token.vk",
-    "vault_manager_sp_id": "stability_pool.vk",
-    "vault_manager_oracle_id": "price_oracle.vk",
-    "stability_pool_token_id": "zkusd_token.vk",
-    "stability_pool_vm_id": "vault_manager.vk"
+    "_note": "CRITICAL: All cross-references now correctly use App IDs",
+    "token_authorized_minter": "vault_manager.app_id = c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490",
+    "vault_manager_token_id": "zkusd_token.app_id = eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540",
+    "vault_manager_sp_id": "stability_pool.app_id = c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf",
+    "vault_manager_oracle_id": "price_oracle.app_id = 26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5"
+  },
+
+  "cross_reference_bytes": {
+    "_note": "Byte arrays for YAML spells - these are the correct App IDs",
+    "token_authorized_minter_vm_app_id": [193, 196, 122, 179, 42, 112, 127, 159, 173, 63, 87, 170, 9, 197, 128, 32, 208, 197, 206, 67, 242, 78, 229, 253, 12, 34, 190, 65, 17, 76, 212, 144],
+    "vault_manager_token_id": [235, 107, 174, 4, 158, 243, 102, 222, 8, 24, 134, 244, 247, 18, 190, 110, 62, 185, 145, 201, 39, 41, 170, 228, 217, 250, 182, 128, 162, 154, 213, 64],
+    "vault_manager_sp_id": [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191],
+    "vault_manager_oracle_id": [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
   },
 
   "deployed_utxos": {
     "price_oracle_state": {
-      "utxo": "e4aeedcc32c72a2e09e29744b7ab5c10224dca8a8a5374a98363b4ad9602b977:0",
-      "confirmations": 150,
+      "utxo": "03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4:0",
       "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
       "initial_price_usd": 104000,
       "status": "confirmed",
-      "explorer": "https://mempool.space/testnet4/tx/e4aeedcc32c72a2e09e29744b7ab5c10224dca8a8a5374a98363b4ad9602b977"
+      "explorer": "https://mempool.space/testnet4/tx/03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4"
     },
     "token_state": {
-      "utxo": "4ec30b16e45b20341586e690f282314d24a5696dde50b80ef02905b1fae8713e:0",
-      "confirmations": 170,
+      "utxo": "458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423:0",
       "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
       "status": "confirmed",
-      "explorer": "https://mempool.space/testnet4/tx/4ec30b16e45b20341586e690f282314d24a5696dde50b80ef02905b1fae8713e"
+      "block_height": 115703,
+      "explorer": "https://mempool.space/testnet4/tx/458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423",
+      "note": "V2 deployment with correct authorized_minter"
     },
     "vault_manager_state": {
-      "utxo": "a6dfdfaa1834eca1203f871f535aa33d2d197518c485e1d7c6dac4ad1b55a7a9:0",
-      "confirmations": 185,
+      "utxo": "b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3:0",
       "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
       "status": "confirmed",
-      "explorer": "https://mempool.space/testnet4/tx/a6dfdfaa1834eca1203f871f535aa33d2d197518c485e1d7c6dac4ad1b55a7a9"
+      "block_height": 115703,
+      "explorer": "https://mempool.space/testnet4/tx/b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3",
+      "note": "V2 deployment with correct zkusd_token_id"
     },
     "stability_pool_state": {
       "utxo": "ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c:0",
-      "confirmations": 185,
       "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
       "status": "confirmed",
       "explorer": "https://mempool.space/testnet4/tx/ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c"
     }
-  },
-
-  "available_funding_utxos": [
-    {
-      "utxo": "ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c:2",
-      "amount_btc": 0.00183305,
-      "amount_sats": 183305
-    },
-    {
-      "utxo": "4ec30b16e45b20341586e690f282314d24a5696dde50b80ef02905b1fae8713e:1",
-      "amount_btc": 0.00114525,
-      "amount_sats": 114525
-    },
-    {
-      "utxo": "7f0152ad9d97244f60e3fb680d35bd3268fa7634e5bf61055d4f28d6ad0e4420:5",
-      "amount_btc": 0.00060000,
-      "amount_sats": 60000
-    },
-    {
-      "utxo": "7f0152ad9d97244f60e3fb680d35bd3268fa7634e5bf61055d4f28d6ad0e4420:3",
-      "amount_btc": 0.00060000,
-      "amount_sats": 60000
-    }
-  ],
-
-  "next_steps": {
-    "hackathon": {
-      "name": "Enchanting UTXO",
-      "organizers": ["Encode Club", "BitcoinOS"],
-      "start_date": "2025-12-08",
-      "duration_weeks": "4-7",
-      "prize_pool": "up to $15,000"
-    },
-    "required_for_submission": [
-      "Frontend UI (React/Next.js)",
-      "Open first vault on testnet",
-      "Demo video",
-      "Pitch presentation"
-    ],
-    "funding_needed_for_vault": {
-      "min_debt_zkusd": 2000,
-      "estimated_btc_collateral": 0.025,
-      "current_balance_btc": 0.0042
-    }
-  },
-
-  "vision": {
-    "goal": "Bitcoin-Native Stablecoin on L1",
-    "approach": "Proto-Rollup (L1 with rollup-like optimizations)",
-    "current_target_users": "BTC holders with $3,000+ positions",
-    "l1_optimizations": [
-      "Batch operations (60% fee reduction)",
-      "Reference inputs (parallel validation)",
-      "Soft liquidation (50-80% loss reduction)",
-      "Vault sharding (parallel processing)",
-      "Flash minting (atomic, no callbacks)"
-    ],
-    "l2_status": "Future research only - not committed"
   }
 }

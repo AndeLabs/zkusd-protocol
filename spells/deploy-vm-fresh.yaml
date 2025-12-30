@@ -1,0 +1,51 @@
+# Deploy fresh VaultManager with correct cross-references
+# Generated: 2024-12-28
+#
+# VM App ID: cd77a5b574bf17694b36a52e7bf0106d034ff23a7a92c58ae5840469f5334f21
+# VM VK: d535fdc354e87af6e750bfe957a4a90e467eba1457f37f05c858beaf09e763bf
+# zkusd_token_id: Token App ID = c2ab90a913767011f16206c4c7bae010d3e75072d277c1d67cbfa52cac81a77f
+#
+# NOTE: stability_pool_id and price_oracle_id use existing deployed App IDs
+# from deployment-config.json
+
+version: 8
+
+apps:
+  $VM: n/cd77a5b574bf17694b36a52e7bf0106d034ff23a7a92c58ae5840469f5334f21/d535fdc354e87af6e750bfe957a4a90e467eba1457f37f05c858beaf09e763bf
+
+private_inputs:
+  $VM:
+    op: 0
+    # Admin address (padded)
+    admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    # Token App ID
+    zkusd_token_id: [194, 171, 144, 169, 19, 118, 112, 17, 241, 98, 6, 196, 199, 186, 224, 16, 211, 231, 80, 114, 210, 119, 193, 214, 124, 191, 165, 44, 172, 129, 167, 127]
+    # Existing StabilityPool App ID (from deployment-config.json)
+    stability_pool_id: [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191]
+    # Existing Oracle App ID (from deployment-config.json)
+    price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+    # Pool addresses
+    active_pool: [172, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    default_pool: [222, 250, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+ins:
+  - utxo_id: d1a2b43c27711f4aabaf2dc9d8c933ed32b10a68764c85a60fb6244e4aa6ec56:3
+    charms: {}
+
+outs:
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $VM:
+        protocol:
+          total_collateral: 0
+          total_debt: 0
+          active_vault_count: 0
+          base_rate: 50
+          last_fee_update_block: 0
+          admin: [213, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          is_paused: false
+        zkusd_token_id: [194, 171, 144, 169, 19, 118, 112, 17, 241, 98, 6, 196, 199, 186, 224, 16, 211, 231, 80, 114, 210, 119, 193, 214, 124, 191, 165, 44, 172, 129, 167, 127]
+        stability_pool_id: [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [172, 79, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        default_pool: [222, 250, 168, 49, 172, 25, 87, 76, 85, 3, 241, 203, 213, 5, 147, 74, 11, 171, 60, 238, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

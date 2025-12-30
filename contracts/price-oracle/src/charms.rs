@@ -50,7 +50,16 @@ pub mod op {
 
 // ============ Witness Structures ============
 
-/// Witness data for oracle operations
+/// Witness for Initialize operation (simple struct, no Options)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct InitWitness {
+    pub op: u8,
+    pub admin: Address,
+    pub operator: Address,
+    pub price: u64,
+}
+
+/// Witness data for oracle operations (update, set_operator)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct OracleWitness {
     /// Operation type (see `op` module)
@@ -123,19 +132,37 @@ pub fn validate_oracle_operation(
     _x: &Data,
     w: &Data,
 ) -> bool {
-    // 1. Parse witness to get operation
+    // 1. Try to parse as InitWitness first (simple struct, no Options)
+    let init_result = w.value::<InitWitness>();
+    if let Ok(init) = init_result {
+        if init.op == op::INITIALIZE {
+            // For initialization, we only need to validate the output state
+            let output_state = match extract_output_state(app, tx) {
+                Some(s) => s,
+                None => {
+                    // Debug: output state extraction failed
+                    return false;
+                }
+            };
+
+            // Validate the output state matches the initialization parameters
+            return validate_initialize(&output_state, &init.admin, &init.operator, init.price);
+        }
+    }
+
+    // 2. Parse witness for other operations
     let witness = match parse_witness(w) {
         Some(w) => w,
         None => return false,
     };
 
-    // 2. Convert to internal action type
+    // 3. Convert to internal action type
     let action = match witness_to_action(&witness) {
         Some(a) => a,
         None => return false,
     };
 
-    // 3. Handle Initialize specially (no input state required)
+    // 4. Handle Initialize from OracleWitness (fallback, shouldn't happen normally)
     if let OracleAction::Initialize { admin, operator, initial_price } = &action {
         // For initialization, we only need to validate the output state
         let output_state = match extract_output_state(app, tx) {
@@ -211,6 +238,7 @@ fn extract_output_state(app: &App, tx: &Transaction) -> Option<OracleState> {
 }
 
 // ============ Parsing Functions ============
+
 
 /// Parse witness data into OracleWitness
 fn parse_witness(w: &Data) -> Option<OracleWitness> {

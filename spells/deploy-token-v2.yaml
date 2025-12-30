@@ -1,0 +1,28 @@
+# Deploy Token V2 - Coordinated deployment with correct cross-references
+# Generated: 2024-12-28
+#
+# Token App ID: eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540
+# Token VK: e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe
+# authorized_minter: VM App ID = c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490
+
+version: 8
+
+apps:
+  $TOKEN: n/eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540/e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe
+
+private_inputs:
+  $TOKEN:
+    op: 0
+    # VM App ID as authorized_minter
+    authorized_minter: [193, 196, 122, 179, 42, 112, 127, 159, 173, 63, 87, 170, 9, 197, 128, 32, 208, 197, 206, 67, 242, 78, 229, 253, 12, 34, 190, 65, 17, 76, 212, 144]
+
+ins:
+  - utxo_id: 5430f27271b653f20654e5552c16dde7d109bab945afc301dbdaec252335e3f0:0
+    charms: {}
+
+outs:
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $TOKEN:
+        authorized_minter: [193, 196, 122, 179, 42, 112, 127, 159, 173, 63, 87, 170, 9, 197, 128, 32, 208, 197, 206, 67, 242, 78, 229, 253, 12, 34, 190, 65, 17, 76, 212, 144]
+        total_supply: 0

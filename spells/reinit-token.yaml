@@ -1,0 +1,24 @@
+# Reinitialize zkUSD Token with CORRECT authorized_minter
+version: 8
+
+apps:
+  $TOKEN: n/a700d21f377387a94e96391a2db8c629dedb1b86e1b638dc84d944d047e8475a/355518c664be1dd7f9f9c283feb2c48adf3baa45c88e04324fb52fc11d625235
+
+private_inputs:
+  $TOKEN:
+    op: 0
+    authorized_minter: [0, 234, 7, 77, 87, 182, 250, 193, 137, 176, 76, 152, 219, 95, 153, 136, 61, 46, 206, 1, 58, 201, 203, 144, 117, 68, 156, 92, 109, 248, 98, 131]
+
+ins:
+  - utxo_id: aee551020f4c00af8afb540034c478c9dad1f3a4baa0e8977a2227c06bd2edf8:0
+    charms:
+      $TOKEN:
+        authorized_minter: [58, 106, 2, 244, 254, 75, 75, 97, 240, 48, 24, 202, 187, 121, 149, 36, 7, 153, 250, 196, 83, 35, 255, 118, 111, 158, 204, 51, 152, 187, 120, 116]
+        total_supply: 0
+
+outs:
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $TOKEN:
+        authorized_minter: [0, 234, 7, 77, 87, 182, 250, 193, 137, 176, 76, 152, 219, 95, 153, 136, 61, 46, 206, 1, 58, 201, 203, 144, 117, 68, 156, 92, 109, 248, 98, 131]
+        total_supply: 0

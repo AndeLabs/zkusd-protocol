@@ -1,0 +1,21 @@
+{
+  "name": "@zkusd/utils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Utility functions for zkUSD",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@zkusd/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
