@@ -19,6 +19,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "husky": "^9.1.7",
+    "next": "^15.3.0",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   },
