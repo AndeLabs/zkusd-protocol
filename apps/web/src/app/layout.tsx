@@ -9,6 +9,14 @@ export const metadata: Metadata = {
   title: 'zkUSD - Bitcoin-Native Stablecoin',
   description: 'Mint zkUSD stablecoins by depositing BTC as collateral. Powered by zero-knowledge proofs on Bitcoin via Charms.',
   keywords: ['zkUSD', 'Bitcoin', 'Stablecoin', 'DeFi', 'Charms', 'ZK'],
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5, // Allow zoom for accessibility
+    userScalable: true,
+  },
+  themeColor: '#f7931a', // Bitcoin orange
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
