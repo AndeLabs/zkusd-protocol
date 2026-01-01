@@ -3,6 +3,5 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && corepack enable && corepack prepare pnpm@9.15.1 --activate && corepack pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && corepack pnpm turbo run build --filter=@zkusd/web",
-  "outputDirectory": ".next",
-  "ignoreCommand": "exit 0"
+  "outputDirectory": ".next"
 }
