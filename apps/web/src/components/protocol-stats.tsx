@@ -9,9 +9,9 @@ export function ProtocolStats() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 animate-pulse">
+          <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5 animate-pulse">
             <div className="h-4 bg-zinc-800 rounded w-24 mb-3" />
             <div className="h-8 bg-zinc-800 rounded w-32" />
           </div>
@@ -56,12 +56,12 @@ export function ProtocolStats() {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {stats.map((stat) => (
-        <div key={stat.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <div className="text-sm text-zinc-400 mb-1">{stat.label}</div>
-          <div className="text-2xl font-bold">{stat.value}</div>
-          <div className={`text-sm ${stat.subValueColor}`}>{stat.subValue}</div>
+        <div key={stat.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5">
+          <div className="text-xs sm:text-sm text-zinc-400 mb-1">{stat.label}</div>
+          <div className="text-xl sm:text-2xl font-bold break-words">{stat.value}</div>
+          <div className={`text-xs sm:text-sm ${stat.subValueColor}`}>{stat.subValue}</div>
         </div>
       ))}
     </div>
