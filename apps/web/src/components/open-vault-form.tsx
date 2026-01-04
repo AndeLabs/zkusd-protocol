@@ -198,13 +198,13 @@ export function OpenVaultForm() {
         <div className="flex gap-3">
           <button
             onClick={resetForm}
-            className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white font-medium py-3 rounded-lg transition-colors"
+            className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white font-medium py-3 sm:py-4 rounded-lg transition-colors min-h-touch text-sm sm:text-base"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 rounded-lg transition-colors"
+            className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 sm:py-4 rounded-lg transition-colors min-h-touch text-sm sm:text-base"
           >
             Confirm & Sign
           </button>
@@ -314,12 +314,12 @@ export function OpenVaultForm() {
       {/* Collateral Input */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-zinc-300">Collateral (BTC)</label>
+          <label className="text-fluid-sm font-medium text-zinc-300">Collateral (BTC)</label>
           {isConnected && (
             <button
               type="button"
               onClick={handleSetMax}
-              className="text-xs text-amber-400 hover:text-amber-300"
+              className="text-xs sm:text-sm text-amber-400 hover:text-amber-300 px-2 py-1 min-h-touch-sm"
             >
               Max: {formatBTC(BigInt(balance))}
             </button>
@@ -333,24 +333,24 @@ export function OpenVaultForm() {
             value={collateralBtc}
             onChange={(e) => setCollateralBtc(e.target.value)}
             placeholder="0.00000000"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 sm:py-4 text-base sm:text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-touch"
           />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm sm:text-base">
             BTC
           </div>
         </div>
-        <div className="text-sm text-zinc-500 mt-1">{formatUSD(collateralUsd)}</div>
+        <div className="text-xs sm:text-sm text-zinc-500 mt-1">{formatUSD(collateralUsd)}</div>
       </div>
 
       {/* Debt Input */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-zinc-300">Borrow (zkUSD)</label>
+          <label className="text-fluid-sm font-medium text-zinc-300">Borrow (zkUSD)</label>
           {collateralSats > 0n && (
             <button
               type="button"
               onClick={handleSetMaxDebt}
-              className="text-xs text-amber-400 hover:text-amber-300"
+              className="text-xs sm:text-sm text-amber-400 hover:text-amber-300 px-2 py-1 min-h-touch-sm"
             >
               Max (~90%): {formatZkUSD(maxMintable * 9n / 10n)}
             </button>
@@ -364,13 +364,13 @@ export function OpenVaultForm() {
             value={debtZkusd}
             onChange={(e) => setDebtZkusd(e.target.value)}
             placeholder="0.00"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 sm:py-4 text-base sm:text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent min-h-touch"
           />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm sm:text-base">
             zkUSD
           </div>
         </div>
-        <div className="text-sm text-zinc-500 mt-1">
+        <div className="text-xs sm:text-sm text-zinc-500 mt-1">
           Min: {formatZkUSD(minDebt)}
         </div>
       </div>
@@ -438,14 +438,14 @@ export function OpenVaultForm() {
 
       {/* Submit Button */}
       {!isConnected ? (
-        <div className="text-center py-4 text-zinc-400">
+        <div className="text-center py-4 text-zinc-400 text-fluid-sm">
           Connect your wallet to open a vault
         </div>
       ) : (
         <button
           type="submit"
           disabled={!isValid || !isReady}
-          className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold py-4 rounded-lg transition-colors disabled:cursor-not-allowed"
+          className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-bold py-3 sm:py-4 rounded-lg transition-colors disabled:cursor-not-allowed min-h-touch-lg text-base sm:text-lg"
         >
           Open Vault
         </button>

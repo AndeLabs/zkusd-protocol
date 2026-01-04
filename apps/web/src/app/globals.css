@@ -19,13 +19,44 @@
   }
 }
 
+/* Mobile-first optimizations */
+* {
+  /* Improve tap performance on mobile */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  /* Prevent font size adjustments on mobile */
+  -webkit-text-size-adjust: 100%;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
+  /* Optimize font rendering for mobile */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+}
+
+/* Touch-friendly focus states */
+@media (hover: none) and (pointer: coarse) {
+  button:focus,
+  a:focus,
+  input:focus,
+  select:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 }
 
 .btn-primary {
   @apply bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white font-semibold py-2 px-4 rounded-lg transition-colors;
+  /* Ensure minimum touch target */
+  min-height: 44px;
 }
 
 .card {
@@ -34,4 +65,45 @@ body {
 
 .input {
   @apply w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none;
+  /* Ensure comfortable touch target for inputs */
+  min-height: 44px;
+  /* Prevent zoom on iOS */
+  font-size: max(16px, 1rem);
+}
+
+/* Mobile menu animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }

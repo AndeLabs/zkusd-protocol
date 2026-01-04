@@ -45,6 +45,18 @@ const DisconnectIcon = () => (
   </svg>
 );
 
+const MenuIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+    <path d="M3 12h18M3 6h18M3 18h18" strokeLinecap="round" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+  </svg>
+);
+
 // ============================================================================
 // Wallet Logo Components
 // ============================================================================
@@ -90,6 +102,7 @@ export function Header() {
 
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Close menus on click outside
   useEffect(() => {
@@ -102,6 +115,18 @@ export function Header() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (showMobileMenu) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showMobileMenu]);
 
   // Clear error after timeout
   useEffect(() => {
@@ -141,18 +166,19 @@ export function Header() {
   };
 
   return (
+    <>
     <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2 group">
+        <a href="/" className="flex items-center gap-2 group flex-shrink-0">
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20"
           >
             <span className="text-white font-bold text-sm">zk</span>
           </motion.div>
-          <span className="text-xl font-bold bg-gradient-to-r from-amber-200 to-orange-400 bg-clip-text text-transparent">
+          <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-amber-200 to-orange-400 bg-clip-text text-transparent">
             zkUSD
           </span>
         </a>
@@ -184,13 +210,13 @@ export function Header() {
         </nav>
 
         {/* Right side */}
-        <div className="flex items-center gap-3" ref={menuRef}>
-          {/* Network Selector */}
-          <div className="relative">
+        <div className="flex items-center gap-2 sm:gap-3" ref={menuRef}>
+          {/* Network Selector - Hidden on mobile */}
+          <div className="relative hidden sm:block">
             <select
               value={networkId}
               onChange={(e) => setNetwork(e.target.value as NetworkId)}
-              className="appearance-none bg-zinc-800/80 border border-zinc-700 rounded-lg pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all cursor-pointer"
+              className="appearance-none bg-zinc-800/80 border border-zinc-700 rounded-lg pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all cursor-pointer min-h-touch-sm"
             >
               <option value="testnet4">Testnet4</option>
               <option value="mainnet">Mainnet</option>
@@ -198,28 +224,28 @@ export function Header() {
             <ChevronIcon className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
           </div>
 
-          {/* Network Badge */}
+          {/* Network Badge - Smaller on mobile */}
           <AnimatePresence>
             {isTestnet && (
               <motion.span
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="text-xs bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full font-medium"
+                className="hidden xs:inline-block text-xs bg-amber-500/20 text-amber-400 px-2 sm:px-2.5 py-1 rounded-full font-medium"
               >
                 Testnet
               </motion.span>
             )}
           </AnimatePresence>
 
-          {/* Demo Mode Badge */}
+          {/* Demo Mode Badge - Hidden on small mobile */}
           <AnimatePresence>
             {isDemoMode && (
               <motion.span
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="text-xs bg-purple-500/20 text-purple-400 px-2.5 py-1 rounded-full font-medium cursor-help"
+                className="hidden sm:inline-block text-xs bg-purple-500/20 text-purple-400 px-2.5 py-1 rounded-full font-medium cursor-help"
                 title="Demo mode: Transactions are simulated. Set NEXT_PUBLIC_PROVER_URL or run 'charms server' for real transactions."
               >
                 Demo Mode
@@ -320,7 +346,7 @@ export function Header() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowWalletMenu(!showWalletMenu)}
                 disabled={isConnecting}
-                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold px-4 py-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20"
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20 min-h-touch-sm text-sm sm:text-base"
               >
                 {isConnecting ? (
                   <>
@@ -334,7 +360,7 @@ export function Header() {
                 ) : (
                   <>
                     <WalletIcon />
-                    Connect
+                    <span className="hidden xs:inline">Connect</span>
                   </>
                 )}
               </motion.button>
@@ -394,6 +420,17 @@ export function Header() {
               </AnimatePresence>
             </div>
           )}
+
+          {/* Mobile Menu Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition-colors"
+            aria-label="Toggle mobile menu"
+          >
+            {showMobileMenu ? <CloseIcon /> : <MenuIcon />}
+          </motion.button>
         </div>
       </div>
 
@@ -411,5 +448,105 @@ export function Header() {
         )}
       </AnimatePresence>
     </header>
+
+    {/* Mobile Navigation Drawer */}
+    <AnimatePresence>
+      {showMobileMenu && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowMobileMenu(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          />
+
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'tween', duration: 0.3 }}
+            className="fixed right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-zinc-900 border-l border-zinc-800 z-50 md:hidden overflow-y-auto"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+              <span className="text-lg font-bold bg-gradient-to-r from-amber-200 to-orange-400 bg-clip-text text-transparent">
+                Menu
+              </span>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-zinc-800 transition-colors"
+                aria-label="Close menu"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+
+            {/* Navigation Links */}
+            <nav className="p-4 space-y-2">
+              {[
+                { href: '/', label: 'Dashboard' },
+                { href: '/vaults', label: 'Vaults' },
+                { href: '/stability-pool', label: 'Stability Pool' },
+              ].map(({ href, label }) => (
+                <a
+                  key={href}
+                  href={href}
+                  onClick={() => setShowMobileMenu(false)}
+                  className="flex items-center px-4 py-3 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-all min-h-touch"
+                >
+                  {label}
+                </a>
+              ))}
+              <a
+                href="https://github.com/zkusd/protocol"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-4 py-3 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-all min-h-touch"
+              >
+                <span>Docs</span>
+                <ExternalLinkIcon />
+              </a>
+            </nav>
+
+            {/* Divider */}
+            <div className="h-px bg-zinc-800 mx-4" />
+
+            {/* Network Selector Mobile */}
+            <div className="p-4 space-y-3">
+              <label className="text-xs text-zinc-400 uppercase tracking-wider">Network</label>
+              <div className="relative">
+                <select
+                  value={networkId}
+                  onChange={(e) => setNetwork(e.target.value as NetworkId)}
+                  className="w-full appearance-none bg-zinc-800 border border-zinc-700 rounded-lg pl-3 pr-8 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all cursor-pointer min-h-touch"
+                >
+                  <option value="testnet4">Testnet4</option>
+                  <option value="mainnet">Mainnet</option>
+                </select>
+                <ChevronIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Status Badges Mobile */}
+            <div className="px-4 pb-4 flex flex-wrap gap-2">
+              {isTestnet && (
+                <span className="text-xs bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full font-medium">
+                  Testnet
+                </span>
+              )}
+              {isDemoMode && (
+                <span className="text-xs bg-purple-500/20 text-purple-400 px-2.5 py-1 rounded-full font-medium">
+                  Demo Mode
+                </span>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   );
 }
