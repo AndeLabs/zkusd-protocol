@@ -194,32 +194,6 @@ impl Royalties for NFTMarketplace {
 }
 ```
 
-## Roadmap
-
-### Phase 1: Extraction (Q1 2026)
-- [ ] Extract core components from zkUSD into standalone crates
-- [ ] Document all patterns and interfaces
-- [ ] Create comprehensive examples
-- [ ] Write migration guide from zkUSD to charms-std
-
-### Phase 2: Generalization (Q2 2026)
-- [ ] Make interfaces generic (support multiple collateral types)
-- [ ] Add configuration flexibility
-- [ ] Create derive macros for common patterns
-- [ ] Build testing framework
-
-### Phase 3: Expansion (Q3-Q4 2026)
-- [ ] Add AMM primitives (Uniswap-style)
-- [ ] Options and derivatives
-- [ ] DAO governance primitives
-- [ ] Cross-chain bridge templates
-
-### Phase 4: Ecosystem (2027+)
-- [ ] Charms Package Registry
-- [ ] Security audits
-- [ ] Documentation site (docs.charms-std.build)
-- [ ] Project templates and scaffolding
-
 ## Advantages Over Ethereum Equivalents
 
 | Feature | OpenZeppelin | **Charms-Std** |

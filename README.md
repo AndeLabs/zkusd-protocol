@@ -428,7 +428,7 @@ charms-std/                    ← Proposed contribution
 │   └── advanced/
 │       ├── atomic_rescue.rs  🚀 Novel: Permission-less rescue
 │       └── insurance_nft.rs  🚀 Novel: Tradable insurance
-└── CONTRIBUTION_STRATEGY.md  ✅ Roadmap for contribution
+└── README.md                 ✅ Vision and contribution guide
 ```
 
 **See**: [`charms-std/`](./charms-std/) directory for proof-of-concept and contribution strategy.
