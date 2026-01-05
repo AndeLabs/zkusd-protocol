@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { isMobileDevice } from '@/lib/mobile-wallet-utils';
 
 // ============================================================================
 // Types
@@ -281,7 +282,12 @@ async function connectUnisat(
 ) {
   const unisat = getUnisat();
   if (!unisat) {
-    throw new Error('Unisat wallet not found. Please install from unisat.io');
+    const isMobile = isMobileDevice();
+    if (isMobile) {
+      throw new Error('Para conectar en móvil, abre esta página desde el navegador de la app Unisat. Toca el botón "Abrir en Unisat" para continuar.');
+    } else {
+      throw new Error('Unisat wallet not found. Please install from unisat.io');
+    }
   }
 
   const accounts = await unisat.requestAccounts();
