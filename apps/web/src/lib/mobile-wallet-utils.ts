@@ -56,37 +56,88 @@ export function isUnisatMobileBrowser(): boolean {
 export function createUnisatDeepLink(url?: string): string {
   const targetUrl = url || window.location.href;
 
-  // Unisat deep link format for opening a dApp
-  // Using the connect method to open the app and trigger connection
-  const appName = 'zkUSD';
-  const nonce = Date.now().toString();
+  // Try multiple deep link patterns as Unisat doesn't have official documentation
+  // Pattern 1: Standard dapp pattern (similar to other wallets)
+  // Pattern 2: Encoded URL in data parameter
+  // We'll try the most common pattern first
+  return `unisat://dapp?url=${encodeURIComponent(targetUrl)}`;
+}
 
-  return `unisat://request?method=connect&from=${encodeURIComponent(appName)}&nonce=${nonce}`;
+/**
+ * Copies text to clipboard
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } else {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return success;
+    }
+  } catch (err) {
+    console.error('Failed to copy to clipboard:', err);
+    return false;
+  }
 }
 
 /**
  * Opens the Unisat mobile app with a deep link
- * If the app is not installed, redirects to the download page
+ * Also copies the URL to clipboard as a fallback
+ * @returns Object with copied status and callback to show instructions
  */
-export function openInUnisatApp() {
-  const deepLink = createUnisatDeepLink();
-  const downloadUrl = 'https://unisat.io/download';
+export async function openInUnisatApp(): Promise<{
+  copied: boolean;
+  showInstructions: (callback: () => void) => void;
+}> {
+  const currentUrl = window.location.href;
 
-  // Try to open the deep link
-  window.location.href = deepLink;
+  // Copy URL to clipboard first
+  const copied = await copyToClipboard(currentUrl);
 
-  // Fallback: If the app doesn't open after 2 seconds, redirect to download page
-  setTimeout(() => {
-    // Check if the page is still visible (app didn't open)
-    if (!document.hidden) {
-      const shouldRedirect = confirm(
-        'Parece que no tienes Unisat instalada. ¿Quieres ir a la página de descarga?'
-      );
-      if (shouldRedirect) {
-        window.open(downloadUrl, '_blank');
-      }
-    }
-  }, 2000);
+  // Try multiple deep link attempts
+  const deepLinkAttempts = [
+    `unisat://dapp?url=${encodeURIComponent(currentUrl)}`,
+    `unisat://browser?url=${encodeURIComponent(currentUrl)}`,
+    `unisat://open?url=${encodeURIComponent(currentUrl)}`,
+  ];
+
+  // Try the first deep link
+  window.location.href = deepLinkAttempts[0];
+
+  // Return function to show instructions after a delay
+  return {
+    copied,
+    showInstructions: (callback: () => void) => {
+      setTimeout(() => {
+        if (!document.hidden) {
+          // If we're still here, show manual instructions
+          callback();
+        }
+      }, 1500);
+    },
+  };
+}
+
+/**
+ * Simplified version for synchronous use - just copies URL and attempts deep link
+ */
+export function tryOpenInUnisatApp() {
+  const currentUrl = window.location.href;
+
+  // Try to copy
+  copyToClipboard(currentUrl);
+
+  // Try deep link
+  window.location.href = `unisat://dapp?url=${encodeURIComponent(currentUrl)}`;
 }
 
 // ============================================================================

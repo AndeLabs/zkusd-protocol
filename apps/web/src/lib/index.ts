@@ -8,6 +8,7 @@ export {
   isUnisatMobileBrowser,
   createUnisatDeepLink,
   openInUnisatApp,
+  tryOpenInUnisatApp,
   getWalletConnectionError,
   isWalletAvailable,
 } from './mobile-wallet-utils';
