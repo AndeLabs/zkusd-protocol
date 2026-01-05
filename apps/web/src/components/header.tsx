@@ -8,6 +8,7 @@ import { showToast } from '@/hooks';
 import { getZkUsdClient } from '@/services';
 import { formatBTC, truncateAddress } from '@zkusd/utils';
 import type { NetworkId } from '@zkusd/config';
+import { UnisatMobileInstructions } from './unisat-mobile-instructions';
 
 // ============================================================================
 // Icons
@@ -104,6 +105,8 @@ export function Header() {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showUnisatInstructions, setShowUnisatInstructions] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   // Detect if we're on mobile
   useEffect(() => {
@@ -153,9 +156,15 @@ export function Header() {
     }
   };
 
-  const handleOpenInUnisat = () => {
+  const handleOpenInUnisat = async () => {
     setShowWalletMenu(false);
-    openInUnisatApp();
+    const result = await openInUnisatApp();
+    setUrlCopied(result.copied);
+
+    // Show instructions modal after attempting deep link
+    result.showInstructions(() => {
+      setShowUnisatInstructions(true);
+    });
   };
 
   const handleDisconnect = () => {
@@ -574,6 +583,14 @@ export function Header() {
         </>
       )}
     </AnimatePresence>
+
+    {/* Unisat Mobile Instructions Modal */}
+    <UnisatMobileInstructions
+      isOpen={showUnisatInstructions}
+      onClose={() => setShowUnisatInstructions(false)}
+      currentUrl={typeof window !== 'undefined' ? window.location.href : ''}
+      urlCopied={urlCopied}
+    />
     </>
   );
 }
