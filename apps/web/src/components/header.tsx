@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNetwork } from '@/lib';
+import { useNetwork, isMobileDevice, openInUnisatApp, isWalletAvailable } from '@/lib';
 import { useWalletStore, type WalletType } from '@/stores';
 import { showToast } from '@/hooks';
 import { getZkUsdClient } from '@/services';
@@ -103,6 +103,12 @@ export function Header() {
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect if we're on mobile
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
 
   // Close menus on click outside
   useEffect(() => {
@@ -145,6 +151,11 @@ export function Header() {
       const message = err instanceof Error ? err.message : 'Failed to connect';
       showToast.error('Connection failed', message);
     }
+  };
+
+  const handleOpenInUnisat = () => {
+    setShowWalletMenu(false);
+    openInUnisatApp();
   };
 
   const handleDisconnect = () => {
@@ -378,23 +389,39 @@ export function Header() {
                     <div className="p-4 border-b border-zinc-700">
                       <h3 className="font-semibold">Connect Wallet</h3>
                       <p className="text-xs text-zinc-400 mt-1">
-                        Select a wallet to connect to zkUSD
+                        {isMobile ? 'Conecta tu wallet de Bitcoin' : 'Select a wallet to connect to zkUSD'}
                       </p>
                     </div>
 
                     <div className="p-2">
-                      <motion.button
-                        whileHover={{ x: 4 }}
-                        onClick={() => handleConnect('unisat')}
-                        className="w-full px-4 py-3 text-left hover:bg-zinc-700/50 rounded-xl transition-colors flex items-center gap-4 group"
-                      >
-                        <UnisatLogo />
-                        <div className="flex-1">
-                          <div className="font-medium group-hover:text-amber-400 transition-colors">Unisat</div>
-                          <div className="text-xs text-zinc-400">Browser extension</div>
-                        </div>
-                        <ChevronIcon className="text-zinc-600 group-hover:text-zinc-400 -rotate-90" />
-                      </motion.button>
+                      {/* Unisat - Show special mobile option if not available */}
+                      {isMobile && !isWalletAvailable('unisat').available ? (
+                        <motion.button
+                          whileHover={{ x: 4 }}
+                          onClick={handleOpenInUnisat}
+                          className="w-full px-4 py-3 text-left bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl transition-colors flex items-center gap-4 group"
+                        >
+                          <UnisatLogo />
+                          <div className="flex-1">
+                            <div className="font-medium text-amber-400">Abrir en Unisat</div>
+                            <div className="text-xs text-zinc-400">Necesario para móvil</div>
+                          </div>
+                          <ExternalLinkIcon />
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          whileHover={{ x: 4 }}
+                          onClick={() => handleConnect('unisat')}
+                          className="w-full px-4 py-3 text-left hover:bg-zinc-700/50 rounded-xl transition-colors flex items-center gap-4 group"
+                        >
+                          <UnisatLogo />
+                          <div className="flex-1">
+                            <div className="font-medium group-hover:text-amber-400 transition-colors">Unisat</div>
+                            <div className="text-xs text-zinc-400">{isMobile ? 'Wallet móvil' : 'Browser extension'}</div>
+                          </div>
+                          <ChevronIcon className="text-zinc-600 group-hover:text-zinc-400 -rotate-90" />
+                        </motion.button>
+                      )}
 
                       <motion.button
                         whileHover={{ x: 4 }}

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useNetwork } from './network-context';
+import { isMobileDevice, isWalletAvailable } from './mobile-wallet-utils';
 
 // ============================================================================
 // Types
@@ -176,7 +177,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const unisat = getUnisat();
 
     if (!unisat) {
-      throw new Error('Unisat wallet not found. Please install the extension from unisat.io');
+      const isMobile = isMobileDevice();
+      if (isMobile) {
+        throw new Error('Para conectar en móvil, abre esta página desde el navegador de la app Unisat. Toca el botón "Abrir en Unisat" para continuar.');
+      } else {
+        throw new Error('Unisat wallet not found. Please install the extension from unisat.io');
+      }
     }
 
     // Request accounts
