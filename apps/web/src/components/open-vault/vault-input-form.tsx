@@ -214,35 +214,51 @@ function VaultWarnings({
     return null;
   }
 
+  const warnings: Array<{ variant: 'warning' | 'error'; message: string }> = [];
+
+  // Check collateral ratio
+  if (icr > 0 && icr < mcr) {
+    warnings.push({
+      variant: 'error',
+      message: `Collateral ratio must be at least ${mcr / 100}%. Add more collateral or reduce debt.`,
+    });
+  }
+
+  // Check minimum debt
+  if (debtRaw > 0n && debtRaw < minDebt) {
+    warnings.push({
+      variant: 'warning',
+      message: `Minimum debt is ${formatZkUSD(minDebt)}.`,
+    });
+  }
+
+  // Check balance
+  if (!hasEnoughBalance) {
+    warnings.push({
+      variant: 'error',
+      message: `Insufficient balance. You have ${formatBTC(BigInt(balance))}.`,
+    });
+  }
+
+  // Check UTXO availability
+  if (hasEnoughBalance && !fundingUtxo) {
+    warnings.push({
+      variant: 'warning',
+      message: 'Waiting for UTXO confirmation. This may take a few minutes.',
+    });
+  }
+
+  if (warnings.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-2">
-      {/* Collateral ratio too low */}
-      {icr > 0 && icr < mcr && (
-        <WarningBox variant="error">
-          Collateral ratio must be at least {mcr / 100}%. Add more collateral or reduce debt.
+      {warnings.map((warning, index) => (
+        <WarningBox key={index} variant={warning.variant}>
+          {warning.message}
         </WarningBox>
-      )}
-
-      {/* Debt below minimum */}
-      {debtRaw > 0n && debtRaw < minDebt && (
-        <WarningBox variant="warning">
-          Minimum debt is {formatZkUSD(minDebt)}.
-        </WarningBox>
-      )}
-
-      {/* Insufficient balance */}
-      {!hasEnoughBalance && (
-        <WarningBox variant="error">
-          Insufficient balance. You have {formatBTC(BigInt(balance))}.
-        </WarningBox>
-      )}
-
-      {/* No suitable UTXO */}
-      {hasEnoughBalance && !fundingUtxo && (
-        <WarningBox variant="warning">
-          No confirmed UTXO large enough. Need collateral + ~10,000 sats for fees.
-        </WarningBox>
-      )}
+      ))}
     </div>
   );
 }
