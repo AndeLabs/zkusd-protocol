@@ -130,10 +130,13 @@ export class ProverService {
 
     // Build request body with chain parameter
     // Note: chain is 'bitcoin' for both mainnet and testnet4
+    // prev_txs must be wrapped as { "bitcoin": "tx_hex" } objects
+    const wrappedPrevTxs = request.prev_txs.map(txHex => ({ bitcoin: txHex }));
+
     const requestBody = {
       spell: request.spell,
       binaries: request.binaries,
-      prev_txs: request.prev_txs,
+      prev_txs: wrappedPrevTxs,
       funding_utxo: request.funding_utxo,
       funding_utxo_value: request.funding_utxo_value,
       change_address: request.change_address,
