@@ -30,6 +30,10 @@ export interface VaultCalculations {
 export interface VaultValidation {
   isValid: boolean;
   hasEnoughBalance: boolean;
+  hasEnoughUtxos: boolean;
+  collateralUtxo: Utxo | undefined; // UTXO for vault collateral (goes in spell ins)
+  feeUtxo: Utxo | undefined;        // SEPARATE UTXO for transaction fees (funding_utxo)
+  /** @deprecated Use collateralUtxo instead */
   fundingUtxo: Utxo | undefined;
 }
 

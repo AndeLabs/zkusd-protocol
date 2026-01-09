@@ -62,12 +62,29 @@ export function useVaultForm() {
   }, [collateralBtc, debtZkusd, protocol?.baseRate, priceScaled, btcPrice]);
 
   // Validation
+  // CRITICAL: Charms requires TWO SEPARATE UTXOs:
+  // 1. collateralUtxo - goes into spell.ins (becomes the vault)
+  // 2. feeUtxo - used as funding_utxo for transaction fees
   const validation: VaultValidation = useMemo(() => {
     const hasEnoughBalance = calculations.collateralSats <= BigInt(balance);
 
-    const fundingUtxo = utxos.find(u =>
-      u.value >= Number(calculations.collateralSats) + FEE_BUFFER_SATS && u.status.confirmed
+    // Sort UTXOs by value (largest first) for optimal selection
+    const confirmedUtxos = utxos
+      .filter(u => u.status.confirmed)
+      .sort((a, b) => b.value - a.value);
+
+    // Find collateral UTXO: must cover the collateral amount
+    const collateralUtxo = confirmedUtxos.find(u =>
+      u.value >= Number(calculations.collateralSats)
     );
+
+    // Find fee UTXO: must be DIFFERENT from collateral UTXO and cover fees
+    const feeUtxo = confirmedUtxos.find(u =>
+      u.value >= FEE_BUFFER_SATS &&
+      (!collateralUtxo || u.txid !== collateralUtxo.txid || u.vout !== collateralUtxo.vout)
+    );
+
+    const hasEnoughUtxos = collateralUtxo !== undefined && feeUtxo !== undefined;
 
     const isValid =
       isConnected &&
@@ -75,9 +92,16 @@ export function useVaultForm() {
       calculations.debtRaw >= minDebt &&
       calculations.icr >= mcr &&
       hasEnoughBalance &&
-      fundingUtxo !== undefined;
+      hasEnoughUtxos;
 
-    return { isValid, hasEnoughBalance, fundingUtxo };
+    return {
+      isValid,
+      hasEnoughBalance,
+      hasEnoughUtxos,
+      collateralUtxo,
+      feeUtxo,
+      fundingUtxo: collateralUtxo, // Deprecated, kept for compatibility
+    };
   }, [calculations, balance, utxos, isConnected, minDebt, mcr]);
 
   // Actions
@@ -112,32 +136,50 @@ export function useVaultForm() {
   }, [validation.isValid, client, deploymentConfig, validation.fundingUtxo, address]);
 
   const handleConfirm = useCallback(async () => {
-    if (!client || !deploymentConfig || !validation.fundingUtxo || !address) return;
+    // CRITICAL: We need TWO SEPARATE UTXOs for Charms protocol
+    if (!client || !deploymentConfig || !validation.collateralUtxo || !validation.feeUtxo || !address) return;
 
     setErrorMessage(null);
 
     try {
       setFormStep('signing');
 
+      // collateralUtxo goes into spell.ins (becomes the vault)
+      const collateralUtxoId = `${validation.collateralUtxo.txid}:${validation.collateralUtxo.vout}`;
+      // feeUtxo is the funding_utxo for transaction fees (MUST BE DIFFERENT)
+      const feeUtxoId = `${validation.feeUtxo.txid}:${validation.feeUtxo.vout}`;
+
+      console.log('[OpenVault] Collateral UTXO:', collateralUtxoId);
+      console.log('[OpenVault] Fee UTXO:', feeUtxoId);
+
       const spell = await client.vault.buildOpenVaultSpell({
         collateral: calculations.collateralSats,
         debt: calculations.debtRaw,
         owner: address,
-        fundingUtxo: `${validation.fundingUtxo.txid}:${validation.fundingUtxo.vout}`,
+        fundingUtxo: collateralUtxoId, // This goes into spell.ins
         ownerAddress: address,
         ownerPubkey: address,
       });
 
-      const prevTxHex = await client.getRawTransaction(validation.fundingUtxo.txid);
+      // Get raw transactions for BOTH UTXOs
+      const [collateralTxHex, feeTxHex] = await Promise.all([
+        client.getRawTransaction(validation.collateralUtxo.txid),
+        validation.feeUtxo.txid !== validation.collateralUtxo.txid
+          ? client.getRawTransaction(validation.feeUtxo.txid)
+          : Promise.resolve(''), // Same tx, no need to fetch twice
+      ]);
+
+      // prev_txs needs both transactions (deduplicated)
+      const prevTxs = feeTxHex ? [collateralTxHex, feeTxHex] : [collateralTxHex];
 
       setFormStep('broadcasting');
 
       const result = await client.executeAndBroadcast({
         spell,
         binaries: {},
-        prevTxs: [prevTxHex],
-        fundingUtxo: `${validation.fundingUtxo.txid}:${validation.fundingUtxo.vout}`,
-        fundingUtxoValue: validation.fundingUtxo.value,
+        prevTxs,
+        fundingUtxo: feeUtxoId, // DIFFERENT from spell.ins UTXO!
+        fundingUtxoValue: validation.feeUtxo.value,
         changeAddress: address,
         signTransaction: signPsbt,
       });
@@ -154,7 +196,7 @@ export function useVaultForm() {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to open vault');
       setFormStep('error');
     }
-  }, [client, deploymentConfig, validation.fundingUtxo, address, calculations, signPsbt, refreshBalance]);
+  }, [client, deploymentConfig, validation.collateralUtxo, validation.feeUtxo, address, calculations, signPsbt, refreshBalance]);
 
   const actions: VaultFormActions = {
     setCollateralBtc,
