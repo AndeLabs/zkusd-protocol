@@ -1,5 +1,15 @@
 'use client';
 
+import {
+  MCR,
+  CCR,
+  MAX_DISPLAY_ICR,
+  getIcrColorClass,
+  getIcrBgClass,
+  getIcrProgress,
+  getIcrProgressClass,
+} from '@/config';
+
 interface ICRBadgeProps {
   icr: number; // ICR in basis points (e.g., 15000 = 150%)
   showLabel?: boolean;
@@ -8,20 +18,16 @@ interface ICRBadgeProps {
 
 /**
  * Get ICR color based on health
- * - Red: Below 110% (liquidation zone)
- * - Yellow: Below 150% (at risk)
- * - Green: Above 150% (healthy)
+ * - Red: Below MCR (110%) - liquidation zone
+ * - Yellow: Below CCR (150%) - at risk
+ * - Green: Above CCR (150%) - healthy
  */
 export function getICRColor(icr: number): string {
-  if (icr < 11000) return 'text-red-400';
-  if (icr < 15000) return 'text-yellow-400';
-  return 'text-green-400';
+  return getIcrColorClass(icr);
 }
 
 export function getICRBgColor(icr: number): string {
-  if (icr < 11000) return 'bg-red-400/10';
-  if (icr < 15000) return 'bg-yellow-400/10';
-  return 'bg-green-400/10';
+  return getIcrBgClass(icr);
 }
 
 const sizeMap = {
@@ -43,9 +49,8 @@ export function ICRBadge({ icr, showLabel = true, size = 'md' }: ICRBadgeProps) 
 }
 
 export function ICRBar({ icr, className = '' }: { icr: number; className?: string }) {
-  // Normalize ICR to 0-100% bar (110% = 0%, 250% = 100%)
-  const normalized = Math.min(100, Math.max(0, ((icr - 11000) / 14000) * 100));
-  const colorClass = icr < 11000 ? 'bg-red-500' : icr < 15000 ? 'bg-yellow-500' : 'bg-green-500';
+  const normalized = getIcrProgress(icr);
+  const colorClass = getIcrProgressClass(icr);
 
   return (
     <div className={`h-2 bg-zinc-700 rounded-full overflow-hidden ${className}`}>

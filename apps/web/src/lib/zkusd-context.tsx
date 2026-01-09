@@ -5,6 +5,7 @@ import { ZkUsdClient, type FeeEstimates } from '@zkusd/sdk';
 import { useNetwork } from './network-context';
 import { useWallet } from './wallet-context';
 import type { DeploymentConfig, OraclePrice } from '@zkusd/types';
+import { REFRESH_INTERVALS, CACHE_TTL } from '@/config';
 
 // ============================================================================
 // Types
@@ -171,14 +172,9 @@ export function ZkUsdProvider({ children }: { children: ReactNode }) {
     // Initial price fetch
     refreshPrice();
 
-    // Refresh price every 60 seconds
-    const priceInterval = setInterval(refreshPrice, 60_000);
-
-    // Refresh block height every 30 seconds
-    const blockInterval = setInterval(refreshBlockHeight, 30_000);
-
-    // Refresh fees every 2 minutes
-    const feeInterval = setInterval(refreshFees, 120_000);
+    const priceInterval = setInterval(refreshPrice, REFRESH_INTERVALS.PRICE);
+    const blockInterval = setInterval(refreshBlockHeight, REFRESH_INTERVALS.BLOCK_HEIGHT);
+    const feeInterval = setInterval(refreshFees, REFRESH_INTERVALS.FEE_ESTIMATES);
 
     return () => {
       clearInterval(priceInterval);
@@ -193,8 +189,7 @@ export function ZkUsdProvider({ children }: { children: ReactNode }) {
 
   const isPriceStale = useMemo(() => {
     if (!priceTimestamp) return true;
-    // Price is stale if older than 10 minutes
-    return Date.now() - priceTimestamp > 10 * 60 * 1000;
+    return Date.now() - priceTimestamp > CACHE_TTL.ORACLE_STALENESS;
   }, [priceTimestamp]);
 
   // ============================================================================

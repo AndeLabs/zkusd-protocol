@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useNetwork } from './network-context';
 import { useZkUsd } from './zkusd-context';
+import { REFRESH_INTERVALS, CACHE_TTL } from '@/config';
 
 interface OraclePrice {
   price: bigint; // 8 decimals (satoshi-like precision)
@@ -28,9 +29,6 @@ interface ProtocolContextType {
 }
 
 const ProtocolContext = createContext<ProtocolContextType | null>(null);
-
-// Price staleness threshold: 10 minutes
-const PRICE_STALE_THRESHOLD_MS = 10 * 60 * 1000;
 
 export function ProtocolProvider({ children }: { children: ReactNode }) {
   const { config } = useNetwork();
@@ -82,7 +80,7 @@ export function ProtocolProvider({ children }: { children: ReactNode }) {
         setLastPriceTimestamp(now);
       } else if (oracle) {
         // Keep existing price but mark as potentially stale
-        const isStale = now - lastPriceTimestamp > PRICE_STALE_THRESHOLD_MS;
+        const isStale = now - lastPriceTimestamp > CACHE_TTL.ORACLE_STALENESS;
         setOracle({
           ...oracle,
           isStale,
@@ -134,8 +132,7 @@ export function ProtocolProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchProtocolState();
-    // Refresh price every 30 seconds for real-time updates
-    const interval = setInterval(fetchProtocolState, 30_000);
+    const interval = setInterval(fetchProtocolState, REFRESH_INTERVALS.PROTOCOL_STATE);
     return () => clearInterval(interval);
   }, [config]); // eslint-disable-line react-hooks/exhaustive-deps
 
