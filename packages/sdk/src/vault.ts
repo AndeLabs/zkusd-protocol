@@ -1,4 +1,11 @@
-// Vault Service - Manage vaults in zkUSD protocol
+/**
+ * Vault Service - Manage vaults in zkUSD protocol
+ *
+ * Vaults are NFTs that hold BTC collateral and track zkUSD debt.
+ * Based on Liquity V2's Trove model.
+ *
+ * @see https://docs.liquity.org/v2-faq/borrowing-and-liquidations
+ */
 
 import type {
   Vault,
@@ -17,12 +24,45 @@ import {
 import type { ZkUsdClient } from './client';
 import type { Spell, SpellInput, SpellOutput } from './services';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Charms spell version */
+const SPELL_VERSION = 8;
+
+/** Default interest rate in basis points (1% = 100 bps) */
+const DEFAULT_INTEREST_RATE_BPS = 100;
+
+/** Default base rate for fee calculation (0.5% = 50 bps) */
+const DEFAULT_BASE_RATE_BPS = 50;
+
+/** Fee floor added to base rate (0.5% = 50 bps) */
+const FEE_FLOOR_BPS = 50;
+
+/** Vault status: Active */
+const VAULT_STATUS_ACTIVE = 0;
+
+/** Basis points denominator */
+const BPS_DENOMINATOR = 10_000n;
+
+/** Minimum collateral ratio (110% = 11000 bps) */
+const MCR_BPS = 11_000;
+
+// ============================================================================
+// Utilities
+// ============================================================================
+
 /**
- * Generate vault ID from funding UTXO (deterministic)
+ * Generate vault ID from funding UTXO (deterministic).
+ *
+ * In production, this should use a proper cryptographic hash (SHA256).
+ * For MVP, uses a simple deterministic hash.
+ *
+ * @param fundingUtxo - The UTXO used to create the vault (txid:vout)
+ * @returns 64-character hex string (32 bytes)
  */
 function generateVaultId(fundingUtxo: string): string {
-  // Simple hash of UTXO - in production would use proper crypto
-  // For now, use first 32 bytes of a deterministic string
   const input = `vault:${fundingUtxo}`;
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
@@ -30,7 +70,6 @@ function generateVaultId(fundingUtxo: string): string {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
-  // Convert to hex string padded to 64 chars
   const hexPart = Math.abs(hash).toString(16).padStart(16, '0');
   return hexPart.repeat(4); // 64 chars = 32 bytes
 }
@@ -154,7 +193,16 @@ export class VaultService {
   }
 
   /**
-   * Build spell for opening a new vault
+   * Build spell for opening a new vault.
+   *
+   * Creates a Charms spell that:
+   * 1. Takes BTC from funding_utxo as collateral
+   * 2. Mints a Vault NFT with the vault state
+   * 3. Mints zkUSD tokens to the owner
+   * 4. Returns change to the owner
+   *
+   * @param params - Vault parameters including collateral, debt, and owner info
+   * @returns Spell object ready for proving
    */
   async buildOpenVaultSpell(params: OpenVaultParams & {
     fundingUtxo: string;
@@ -165,61 +213,57 @@ export class VaultService {
   }): Promise<Spell> {
     const config = await this.client.getDeploymentConfig();
     const currentBlock = params.currentBlock ?? await this.client.getBlockHeight();
-    const interestRateBps = params.interestRateBps ?? 100; // Default 1% APR
+    const interestRateBps = params.interestRateBps ?? DEFAULT_INTEREST_RATE_BPS;
 
     // Generate deterministic vault ID from funding UTXO
     const vaultId = generateVaultId(params.fundingUtxo);
 
     // Calculate fee and total debt
     const state = await this.getProtocolState().catch(() => null);
-    const baseRate = state?.protocol.baseRate ?? 50;
+    const baseRate = state?.protocol.baseRate ?? DEFAULT_BASE_RATE_BPS;
     const fee = this.calculateOpeningFee(params.debt, baseRate);
     const totalDebt = params.debt + fee;
 
-    // Build the spell
+    // Get app references from config
     const vmAppRef = config.contracts.vaultManager.appRef;
-    const tokenAppRef = config.contracts.zkusdToken.appRef.replace('n/', 't/'); // Use fungible token ref
+    const tokenAppRef = config.contracts.zkusdToken.appRef.replace('n/', 't/');
+
+    // Build vault state
+    const vaultState = {
+      id: vaultId,
+      owner: params.ownerPubkey,
+      collateral: Number(params.collateral),
+      debt: Number(totalDebt),
+      created_at: currentBlock,
+      last_updated: currentBlock,
+      status: VAULT_STATUS_ACTIVE,
+      interest_rate_bps: interestRateBps,
+      accrued_interest: 0,
+      redistributed_debt: 0,
+      redistributed_collateral: 0,
+      insurance_balance: 0,
+    };
 
     const spell: Spell = {
-      version: 8,
+      version: SPELL_VERSION,
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,
       },
-      // Private inputs (witness data) for vault ID generation
       private_inputs: {
-        '$00': params.fundingUtxo, // Used to generate deterministic vault ID
+        '$00': params.fundingUtxo,
       },
-      // For open vault: ins is empty since we're not transforming existing charms
-      // All BTC (collateral + fees) comes from funding_utxo
-      ins: [],
+      ins: [], // Empty - all BTC comes from funding_utxo
       outs: [
-        // Output 1: New Vault NFT
+        // Output 1: Vault NFT
         {
           address: params.ownerAddress,
-          charms: {
-            '$00': {
-              id: vaultId,
-              owner: params.ownerPubkey,
-              collateral: Number(params.collateral),
-              debt: Number(totalDebt),
-              created_at: currentBlock,
-              last_updated: currentBlock,
-              status: 0, // Active
-              interest_rate_bps: interestRateBps,
-              accrued_interest: 0,
-              redistributed_debt: 0,
-              redistributed_collateral: 0,
-              insurance_balance: 0,
-            },
-          },
+          charms: { '$00': vaultState },
         },
-        // Output 2: Minted zkUSD tokens
+        // Output 2: Minted zkUSD
         {
           address: params.ownerAddress,
-          charms: {
-            '$01': Number(params.debt), // Net debt (before fee)
-          },
+          charms: { '$01': Number(params.debt) },
         },
         // Output 3: Change
         {
