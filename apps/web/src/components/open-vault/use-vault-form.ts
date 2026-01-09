@@ -94,23 +94,43 @@ export function useVaultForm() {
   // ============================================================================
 
   const validation: VaultValidation = useMemo(() => {
+    // Early exit if not connected
+    if (!isConnected) {
+      return {
+        isValid: false,
+        hasEnoughBalance: false,
+        hasEnoughUtxos: false,
+        fundingUtxo: undefined,
+      };
+    }
+
+    // Calculate required amount (collateral + fees)
+    const requiredAmount = Number(calculations.collateralSats) + FEE_BUFFER_SATS;
     const hasEnoughBalance = calculations.collateralSats <= BigInt(balance);
 
-    // Find best UTXO: confirmed, large enough for collateral + fees
-    const fundingUtxo = utxos
-      .filter(u => u.status.confirmed)
-      .sort((a, b) => b.value - a.value) // Largest first
-      .find(u => u.value >= Number(calculations.collateralSats) + FEE_BUFFER_SATS);
+    // Find suitable UTXOs:
+    // 1. Must be confirmed (safety for production)
+    // 2. Must be large enough for collateral + fees
+    // 3. Sort by value descending (use largest first to minimize fragmentation)
+    const confirmedUtxos = utxos.filter(u => u.status.confirmed);
+    const suitableUtxos = confirmedUtxos
+      .filter(u => u.value >= requiredAmount)
+      .sort((a, b) => b.value - a.value);
 
+    const fundingUtxo = suitableUtxos[0];
     const hasEnoughUtxos = fundingUtxo !== undefined;
 
-    const isValid =
-      isConnected &&
-      calculations.collateralSats > 0n &&
-      calculations.debtRaw >= minDebt &&
-      calculations.icr >= mcr &&
-      hasEnoughBalance &&
-      hasEnoughUtxos;
+    // Comprehensive validation
+    const validations = {
+      isConnected,
+      hasCollateral: calculations.collateralSats > 0n,
+      meetsMinDebt: calculations.debtRaw >= minDebt,
+      meetsMinRatio: calculations.icr >= mcr,
+      hasEnoughBalance,
+      hasEnoughUtxos,
+    };
+
+    const isValid = Object.values(validations).every(Boolean);
 
     return {
       isValid,
@@ -157,7 +177,28 @@ export function useVaultForm() {
   }, [validation.isValid, client, deploymentConfig, validation.fundingUtxo, address]);
 
   const handleConfirm = useCallback(async () => {
-    if (!client || !deploymentConfig || !validation.fundingUtxo || !address) {
+    // Validate all required parameters
+    if (!client) {
+      setErrorMessage('Protocol client not initialized');
+      setFormStep('error');
+      return;
+    }
+
+    if (!deploymentConfig) {
+      setErrorMessage('Deployment configuration not loaded');
+      setFormStep('error');
+      return;
+    }
+
+    if (!validation.fundingUtxo) {
+      setErrorMessage('No suitable UTXO found for transaction');
+      setFormStep('error');
+      return;
+    }
+
+    if (!address) {
+      setErrorMessage('Wallet not connected');
+      setFormStep('error');
       return;
     }
 
@@ -181,6 +222,10 @@ export function useVaultForm() {
       // Get raw transaction for UTXO verification
       const prevTxHex = await client.getRawTransaction(validation.fundingUtxo.txid);
 
+      if (!prevTxHex) {
+        throw new Error('Failed to fetch transaction data');
+      }
+
       setFormStep('broadcasting');
 
       // Execute and broadcast
@@ -202,9 +247,25 @@ export function useVaultForm() {
 
       // Refresh wallet balance
       await refreshBalance();
+
     } catch (error) {
       console.error('[OpenVault] Transaction failed:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Transaction failed');
+
+      // Parse error for user-friendly message
+      let message = 'Transaction failed';
+      if (error instanceof Error) {
+        if (error.message.includes('User rejected')) {
+          message = 'Transaction cancelled by user';
+        } else if (error.message.includes('insufficient')) {
+          message = 'Insufficient funds for transaction';
+        } else if (error.message.includes('network')) {
+          message = 'Network error. Please try again';
+        } else {
+          message = error.message;
+        }
+      }
+
+      setErrorMessage(message);
       setFormStep('error');
     }
   }, [client, deploymentConfig, validation.fundingUtxo, address, calculations, signPsbt, refreshBalance]);
