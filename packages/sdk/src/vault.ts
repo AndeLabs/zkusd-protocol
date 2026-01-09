@@ -190,12 +190,9 @@ export class VaultService {
       private_inputs: {
         '$00': params.fundingUtxo, // Used to generate deterministic vault ID
       },
-      ins: [
-        {
-          utxo: params.fundingUtxo,
-          charms: {},
-        },
-      ],
+      // For open vault: ins is empty since we're not transforming existing charms
+      // All BTC (collateral + fees) comes from funding_utxo
+      ins: [],
       outs: [
         // Output 1: New Vault NFT
         {
