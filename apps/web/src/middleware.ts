@@ -48,7 +48,7 @@ function getSecurityHeaders(): Record<string, string> {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://api.coingecko.com https://api.coinbase.com https://api.kraken.com https://api.binance.com https://mempool.space https://blockstream.info https://vercel.live https://*.vercel.live wss: ws:",
+    "connect-src 'self' https://api.coingecko.com https://api.coinbase.com https://api.kraken.com https://api.binance.com https://mempool.space https://blockstream.info https://vercel.live https://*.vercel.live https://v8.charms.dev https://*.charms.dev wss: ws:",
     "frame-src 'self' https://vercel.live",
     "frame-ancestors 'none'",
     "base-uri 'self'",
