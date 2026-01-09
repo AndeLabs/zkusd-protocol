@@ -6,7 +6,28 @@ import { btcToSats, calculateICR, calculateLiquidationPrice, calculateMaxMintabl
 import { FEE_BUFFER_SATS } from '@/config';
 import type { FormStep, TxResult, VaultCalculations, VaultValidation, VaultFormActions } from './types';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Satoshis per BTC */
+const SATS_PER_BTC = 100_000_000;
+
+/** Base fee rate added to protocol base rate (basis points) */
+const BASE_FEE_FLOOR_BPS = 50;
+
+/** Basis points denominator */
+const BPS_DENOMINATOR = 10_000n;
+
+/** Safety margin for max debt (90% of theoretical max) */
+const MAX_DEBT_SAFETY_MARGIN = 0.9;
+
+// ============================================================================
+// Hook
+// ============================================================================
+
 export function useVaultForm() {
+  // External state
   const { oracle, protocol } = useProtocol();
   const { isConnected, address, balance, utxos, signPsbt, refreshBalance } = useWallet();
   const { config } = useNetwork();
@@ -19,29 +40,36 @@ export function useVaultForm() {
   const [txResult, setTxResult] = useState<TxResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Derived values
-  const btcPrice = oracle?.priceUsd ?? (zkusdBtcPrice ? Number(zkusdBtcPrice) / 100_000_000 : 0);
+  // Derived protocol values
+  const btcPrice = oracle?.priceUsd ?? (zkusdBtcPrice ? Number(zkusdBtcPrice) / SATS_PER_BTC : 0);
   const priceScaled = oracle?.price ?? zkusdBtcPrice ?? 0n;
   const minDebt = config.protocolParams.minDebt;
   const mcr = config.protocolParams.mcr;
 
+  // ============================================================================
   // Calculations
+  // ============================================================================
+
   const calculations: VaultCalculations = useMemo(() => {
     const collateralSats = btcToSats(parseFloat(collateralBtc) || 0);
-    const debtRaw = BigInt(Math.floor((parseFloat(debtZkusd) || 0) * 100_000_000));
+    const debtRaw = BigInt(Math.floor((parseFloat(debtZkusd) || 0) * SATS_PER_BTC));
 
-    const feeRate = (protocol?.baseRate ?? 50) + 50;
-    const fee = debtRaw > 0n ? (debtRaw * BigInt(feeRate)) / 10000n : 0n;
+    // Calculate opening fee
+    const feeRate = (protocol?.baseRate ?? BASE_FEE_FLOOR_BPS) + BASE_FEE_FLOOR_BPS;
+    const fee = debtRaw > 0n ? (debtRaw * BigInt(feeRate)) / BPS_DENOMINATOR : 0n;
     const totalDebt = debtRaw + fee;
 
+    // Calculate collateral ratio
     const icr = collateralSats === 0n || totalDebt === 0n || priceScaled === 0n
       ? 0
       : calculateICR(collateralSats, totalDebt, priceScaled);
 
+    // Calculate liquidation price
     const liquidationPrice = collateralSats === 0n || totalDebt === 0n
       ? 0n
       : calculateLiquidationPrice(collateralSats, totalDebt);
 
+    // Calculate max mintable
     const maxMintable = collateralSats === 0n || priceScaled === 0n
       ? 0n
       : calculateMaxMintable(collateralSats, priceScaled, 0n);
@@ -61,21 +89,18 @@ export function useVaultForm() {
     };
   }, [collateralBtc, debtZkusd, protocol?.baseRate, priceScaled, btcPrice]);
 
+  // ============================================================================
   // Validation
-  // For open vault: spell.ins is empty, all BTC comes from funding_utxo
-  // This allows operation with a single UTXO
+  // ============================================================================
+
   const validation: VaultValidation = useMemo(() => {
     const hasEnoughBalance = calculations.collateralSats <= BigInt(balance);
 
-    // Sort UTXOs by value (largest first) for optimal selection
-    const confirmedUtxos = utxos
+    // Find best UTXO: confirmed, large enough for collateral + fees
+    const fundingUtxo = utxos
       .filter(u => u.status.confirmed)
-      .sort((a, b) => b.value - a.value);
-
-    // Find a UTXO that covers collateral + fees
-    const fundingUtxo = confirmedUtxos.find(u =>
-      u.value >= Number(calculations.collateralSats) + FEE_BUFFER_SATS
-    );
+      .sort((a, b) => b.value - a.value) // Largest first
+      .find(u => u.value >= Number(calculations.collateralSats) + FEE_BUFFER_SATS);
 
     const hasEnoughUtxos = fundingUtxo !== undefined;
 
@@ -91,22 +116,23 @@ export function useVaultForm() {
       isValid,
       hasEnoughBalance,
       hasEnoughUtxos,
-      collateralUtxo: undefined, // Not needed - ins is empty
-      feeUtxo: fundingUtxo,      // Single UTXO for collateral + fees
       fundingUtxo,
     };
   }, [calculations, balance, utxos, isConnected, minDebt, mcr]);
 
+  // ============================================================================
   // Actions
+  // ============================================================================
+
   const handleSetMax = useCallback(() => {
-    const maxBtc = Math.max(0, (Number(balance) - FEE_BUFFER_SATS)) / 100_000_000;
+    const maxBtc = Math.max(0, (Number(balance) - FEE_BUFFER_SATS)) / SATS_PER_BTC;
     setCollateralBtc(maxBtc.toFixed(8));
   }, [balance]);
 
   const handleSetMaxDebt = useCallback(() => {
     if (calculations.maxMintable > 0n) {
-      const maxZkusd = Number(calculations.maxMintable) / 100_000_000;
-      setDebtZkusd((maxZkusd * 0.9).toFixed(2));
+      const maxZkusd = Number(calculations.maxMintable) / SATS_PER_BTC;
+      setDebtZkusd((maxZkusd * MAX_DEBT_SAFETY_MARGIN).toFixed(2));
     }
   }, [calculations.maxMintable]);
 
@@ -124,39 +150,40 @@ export function useVaultForm() {
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    if (!validation.isValid || !client || !deploymentConfig || !validation.fundingUtxo || !address) return;
+    if (!validation.isValid || !client || !deploymentConfig || !validation.fundingUtxo || !address) {
+      return;
+    }
     setFormStep('confirm');
   }, [validation.isValid, client, deploymentConfig, validation.fundingUtxo, address]);
 
   const handleConfirm = useCallback(async () => {
-    // For open vault: spell.ins is empty, single UTXO provides collateral + fees
-    if (!client || !deploymentConfig || !validation.fundingUtxo || !address) return;
+    if (!client || !deploymentConfig || !validation.fundingUtxo || !address) {
+      return;
+    }
 
     setErrorMessage(null);
 
     try {
       setFormStep('signing');
 
-      // Single UTXO provides both collateral and fees
       const fundingUtxoId = `${validation.fundingUtxo.txid}:${validation.fundingUtxo.vout}`;
 
-      console.log('[OpenVault] Funding UTXO:', fundingUtxoId);
-      console.log('[OpenVault] Collateral:', calculations.collateralSats.toString(), 'sats');
-
+      // Build the spell
       const spell = await client.vault.buildOpenVaultSpell({
         collateral: calculations.collateralSats,
         debt: calculations.debtRaw,
         owner: address,
-        fundingUtxo: fundingUtxoId, // Used for vault ID generation
+        fundingUtxo: fundingUtxoId,
         ownerAddress: address,
         ownerPubkey: address,
       });
 
-      // Get raw transaction for funding UTXO
+      // Get raw transaction for UTXO verification
       const prevTxHex = await client.getRawTransaction(validation.fundingUtxo.txid);
 
       setFormStep('broadcasting');
 
+      // Execute and broadcast
       const result = await client.executeAndBroadcast({
         spell,
         binaries: {},
@@ -173,13 +200,18 @@ export function useVaultForm() {
       });
       setFormStep('success');
 
+      // Refresh wallet balance
       await refreshBalance();
     } catch (error) {
-      console.error('Failed to open vault:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to open vault');
+      console.error('[OpenVault] Transaction failed:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Transaction failed');
       setFormStep('error');
     }
   }, [client, deploymentConfig, validation.fundingUtxo, address, calculations, signPsbt, refreshBalance]);
+
+  // ============================================================================
+  // Return
+  // ============================================================================
 
   const actions: VaultFormActions = {
     setCollateralBtc,
@@ -199,7 +231,7 @@ export function useVaultForm() {
     txResult,
     errorMessage,
 
-    // Derived
+    // Protocol values
     btcPrice,
     priceScaled,
     minDebt,
@@ -210,7 +242,7 @@ export function useVaultForm() {
     feeEstimates,
     explorerUrl: config.explorerUrl,
 
-    // Calculations & Validation
+    // Computed
     calculations,
     validation,
 

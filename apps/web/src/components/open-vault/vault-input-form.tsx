@@ -33,7 +33,7 @@ export function VaultInputForm({
   feeEstimates,
 }: VaultInputFormProps) {
   const { icr, fee, totalDebt, liquidationPrice, maxMintable, collateralUsd, feeRate, collateralSats, debtRaw } = calculations;
-  const { isValid, hasEnoughBalance, feeUtxo } = validation;
+  const { isValid, hasEnoughBalance, fundingUtxo } = validation;
 
   const getIcrColor = () => {
     if (icr === 0) return 'text-zinc-500';
@@ -161,7 +161,7 @@ export function VaultInputForm({
         collateralSats={collateralSats}
         balance={balance}
         isConnected={isConnected}
-        feeUtxo={feeUtxo}
+        fundingUtxo={fundingUtxo}
       />
 
       {/* Submit Button */}
@@ -182,7 +182,10 @@ export function VaultInputForm({
   );
 }
 
-// Warnings sub-component
+// ============================================================================
+// Warnings Component
+// ============================================================================
+
 interface VaultWarningsProps {
   icr: number;
   mcr: number;
@@ -192,7 +195,7 @@ interface VaultWarningsProps {
   collateralSats: bigint;
   balance: number;
   isConnected: boolean;
-  feeUtxo: unknown;
+  fundingUtxo: unknown;
 }
 
 function VaultWarnings({
@@ -204,33 +207,64 @@ function VaultWarnings({
   collateralSats,
   balance,
   isConnected,
-  feeUtxo,
+  fundingUtxo,
 }: VaultWarningsProps) {
+  // No warnings needed if not connected or no collateral entered
+  if (!isConnected || collateralSats === 0n) {
+    return null;
+  }
+
   return (
-    <>
+    <div className="space-y-2">
+      {/* Collateral ratio too low */}
       {icr > 0 && icr < mcr && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+        <WarningBox variant="error">
           Collateral ratio must be at least {mcr / 100}%. Add more collateral or reduce debt.
-        </div>
+        </WarningBox>
       )}
 
+      {/* Debt below minimum */}
       {debtRaw > 0n && debtRaw < minDebt && (
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-400">
+        <WarningBox variant="warning">
           Minimum debt is {formatZkUSD(minDebt)}.
-        </div>
+        </WarningBox>
       )}
 
-      {!hasEnoughBalance && collateralSats > 0n && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+      {/* Insufficient balance */}
+      {!hasEnoughBalance && (
+        <WarningBox variant="error">
           Insufficient balance. You have {formatBTC(BigInt(balance))}.
-        </div>
+        </WarningBox>
       )}
 
-      {isConnected && collateralSats > 0n && !feeUtxo && (
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-400">
+      {/* No suitable UTXO */}
+      {hasEnoughBalance && !fundingUtxo && (
+        <WarningBox variant="warning">
           No confirmed UTXO large enough. Need collateral + ~10,000 sats for fees.
-        </div>
+        </WarningBox>
       )}
-    </>
+    </div>
+  );
+}
+
+// ============================================================================
+// Warning Box Component
+// ============================================================================
+
+interface WarningBoxProps {
+  variant: 'warning' | 'error';
+  children: React.ReactNode;
+}
+
+function WarningBox({ variant, children }: WarningBoxProps) {
+  const styles = {
+    warning: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
+    error: 'bg-red-500/10 border-red-500/30 text-red-400',
+  };
+
+  return (
+    <div className={`border rounded-lg p-3 text-sm ${styles[variant]}`}>
+      {children}
+    </div>
   );
 }
