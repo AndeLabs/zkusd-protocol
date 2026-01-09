@@ -41,13 +41,15 @@ function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
 
 function getSecurityHeaders(): Record<string, string> {
   // Content Security Policy
+  // Note: Vercel Live and preview features require additional domains
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires unsafe-eval in dev
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://*.vercel.live", // Next.js requires unsafe-eval in dev
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://api.coingecko.com https://api.coinbase.com https://api.kraken.com https://api.binance.com https://mempool.space https://blockstream.info wss:",
+    "connect-src 'self' https://api.coingecko.com https://api.coinbase.com https://api.kraken.com https://api.binance.com https://mempool.space https://blockstream.info https://vercel.live https://*.vercel.live wss: ws:",
+    "frame-src 'self' https://vercel.live",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
