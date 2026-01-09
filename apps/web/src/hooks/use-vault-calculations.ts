@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { calculateICR, calculateLiquidationPrice, calculateMaxMintable } from '@zkusd/utils';
+import { isLiquidatable, isAtRisk, isHealthy } from '@/config';
 
 interface VaultCalculationsParams {
   collateral: bigint;
@@ -48,13 +49,13 @@ export function useVaultCalculations({
     const maxMintable = calculateMaxMintable(collateral, price, debt);
     const collateralValue = (collateral * price) / 100_000_000n;
 
-    const isLiquidatable = icr < 11000;
-    const isAtRisk = icr >= 11000 && icr < 15000;
-    const isHealthy = icr >= 15000;
+    const liquidatable = isLiquidatable(icr);
+    const atRisk = isAtRisk(icr);
+    const healthy = isHealthy(icr);
 
-    const healthStatus = isLiquidatable
+    const healthStatus = liquidatable
       ? 'liquidatable' as const
-      : isAtRisk
+      : atRisk
         ? 'at-risk' as const
         : 'healthy' as const;
 
@@ -63,9 +64,9 @@ export function useVaultCalculations({
       liquidationPrice,
       maxMintable,
       collateralValue,
-      isHealthy,
-      isAtRisk,
-      isLiquidatable,
+      isHealthy: healthy,
+      isAtRisk: atRisk,
+      isLiquidatable: liquidatable,
       healthStatus,
     };
   }, [collateral, debt, price]);

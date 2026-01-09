@@ -1,0 +1,11 @@
+# zkUSD Robots.txt
+# https://zkusd.finance
+
+User-agent: *
+Allow: /
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://zkusd.finance/sitemap.xml

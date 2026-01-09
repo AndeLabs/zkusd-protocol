@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { CACHE_TTL, REFRESH_INTERVALS } from '@/config';
 
 interface PriceData {
   price: bigint; // Price in satoshis per zkUSD (8 decimals)
@@ -11,8 +12,6 @@ interface PriceData {
 
 const COINGECKO_API = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd';
 const CACHE_KEY = 'zkusd_btc_price';
-const CACHE_TTL = 60_000; // 1 minute
-const REFRESH_INTERVAL = 30_000; // 30 seconds
 
 /**
  * Hook for fetching and caching BTC price
@@ -29,7 +28,7 @@ export function useBtcPrice() {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_TTL) {
+        if (Date.now() - timestamp < CACHE_TTL.PRICE) {
           setPriceData({ ...data, source: 'cached' as const });
           setIsLoading(false);
           return data;
@@ -85,7 +84,7 @@ export function useBtcPrice() {
 
   // Auto-refresh
   useEffect(() => {
-    const interval = setInterval(fetchPrice, REFRESH_INTERVAL);
+    const interval = setInterval(fetchPrice, REFRESH_INTERVALS.PROTOCOL_STATE);
     return () => clearInterval(interval);
   }, [fetchPrice]);
 

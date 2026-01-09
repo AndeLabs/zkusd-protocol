@@ -12,3 +12,13 @@ export {
   getWalletConnectionError,
   isWalletAvailable,
 } from './mobile-wallet-utils';
+export {
+  showToast,
+  handleError,
+  logError,
+  withRetry,
+  classifyError,
+  getErrorMessage,
+  type AppError,
+  type ErrorType,
+} from './error-handler';

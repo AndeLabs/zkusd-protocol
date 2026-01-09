@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { useEffect, useRef } from 'react';
 import { isMobileDevice } from '@/lib/mobile-wallet-utils';
 
 // ============================================================================
@@ -34,16 +35,24 @@ interface WalletState {
   // Status
   error: string | null;
   lastRefresh: number | null;
+
+  // Config (stored for event handlers)
+  _explorerApiUrl: string | null;
+  _isTestnet: boolean;
 }
 
 interface WalletActions {
   connect: (type: WalletType, explorerApiUrl: string, isTestnet: boolean) => Promise<void>;
   disconnect: () => void;
-  refreshBalance: (explorerApiUrl: string) => Promise<void>;
+  refreshBalance: (explorerApiUrl?: string) => Promise<void>;
   signPsbt: (psbtBase64: string, inputsToSign?: number[]) => Promise<string>;
   signAndBroadcast: (psbtBase64: string, inputsToSign?: number[]) => Promise<string>;
   setError: (error: string | null) => void;
   reset: () => void;
+
+  // Internal actions for event handlers
+  _handleAccountChange: (accounts: string[]) => Promise<void>;
+  _handleNetworkChange: (network: string) => void;
 }
 
 // ============================================================================
@@ -84,7 +93,7 @@ interface XverseProvider {
 // Helpers
 // ============================================================================
 
-const getUnisat = (): UnisatProvider | null => {
+export const getUnisat = (): UnisatProvider | null => {
   if (typeof window === 'undefined') return null;
   return (window as unknown as { unisat?: UnisatProvider }).unisat || null;
 };
@@ -124,6 +133,8 @@ const initialState: WalletState = {
   utxos: [],
   error: null,
   lastRefresh: null,
+  _explorerApiUrl: null,
+  _isTestnet: true,
 };
 
 // ============================================================================
@@ -136,7 +147,7 @@ export const useWalletStore = create<WalletState & WalletActions>()(
       ...initialState,
 
       connect: async (type: WalletType, explorerApiUrl: string, isTestnet: boolean) => {
-        set({ isConnecting: true, error: null });
+        set({ isConnecting: true, error: null, _explorerApiUrl: explorerApiUrl, _isTestnet: isTestnet });
 
         try {
           if (type === 'unisat') {
@@ -155,12 +166,13 @@ export const useWalletStore = create<WalletState & WalletActions>()(
         set({ ...initialState });
       },
 
-      refreshBalance: async (explorerApiUrl: string) => {
-        const { address } = get();
-        if (!address) return;
+      refreshBalance: async (explorerApiUrl?: string) => {
+        const { address, _explorerApiUrl } = get();
+        const apiUrl = explorerApiUrl || _explorerApiUrl;
+        if (!address || !apiUrl) return;
 
         try {
-          const response = await fetch(`${explorerApiUrl}/address/${address}/utxo`);
+          const response = await fetch(`${apiUrl}/address/${address}/utxo`);
           if (!response.ok) throw new Error('Failed to fetch UTXOs');
 
           const utxos: Utxo[] = await response.json();
@@ -169,6 +181,65 @@ export const useWalletStore = create<WalletState & WalletActions>()(
           set({ utxos, balance, lastRefresh: Date.now() });
         } catch (err) {
           console.error('Failed to refresh balance:', err);
+        }
+      },
+
+      // Handler for Unisat account changes
+      _handleAccountChange: async (accounts: string[]) => {
+        const { walletType, address, _explorerApiUrl } = get();
+
+        if (walletType !== 'unisat') return;
+
+        if (accounts.length === 0) {
+          // User disconnected from wallet
+          get().disconnect();
+          return;
+        }
+
+        const newAddress = accounts[0];
+        if (newAddress !== address) {
+          console.log('[Wallet] Account changed:', newAddress);
+
+          // Update address
+          set({
+            address: newAddress,
+            paymentAddress: newAddress,
+            ordinalsAddress: newAddress,
+          });
+
+          // Get new public key
+          try {
+            const unisat = getUnisat();
+            if (unisat) {
+              const pubKey = await unisat.getPublicKey();
+              set({ publicKey: pubKey });
+            }
+          } catch (err) {
+            console.error('[Wallet] Failed to get public key:', err);
+          }
+
+          // Refresh balance for new address
+          if (_explorerApiUrl) {
+            await get().refreshBalance(_explorerApiUrl);
+          }
+        }
+      },
+
+      // Handler for Unisat network changes
+      _handleNetworkChange: (network: string) => {
+        const { walletType, _isTestnet } = get();
+
+        if (walletType !== 'unisat') return;
+
+        const expectedNetwork = _isTestnet ? 'testnet' : 'livenet';
+
+        if (network !== expectedNetwork) {
+          console.log('[Wallet] Network changed to unexpected:', network);
+          get().disconnect();
+          set({ error: `Please switch to ${expectedNetwork} network` });
+        } else {
+          // Same network, refresh balance
+          get().refreshBalance();
         }
       },
 
@@ -265,6 +336,8 @@ export const useWalletStore = create<WalletState & WalletActions>()(
       partialize: (state) => ({
         walletType: state.walletType,
         address: state.address,
+        _explorerApiUrl: state._explorerApiUrl,
+        _isTestnet: state._isTestnet,
       }),
     }
   )
@@ -364,6 +437,62 @@ async function connectXverse(
 }
 
 // ============================================================================
+// Hook with Event Listeners
+// ============================================================================
+
+/**
+ * Hook that sets up wallet event listeners for account/network changes.
+ * Use this in your app's root component (e.g., WalletProvider or layout).
+ */
+export function useWalletEventListeners() {
+  const { isConnected, walletType, _handleAccountChange, _handleNetworkChange } = useWalletStore();
+  const listenersRef = useRef<{
+    accountsChanged: ((accounts: unknown) => void) | null;
+    networkChanged: ((network: unknown) => void) | null;
+  }>({ accountsChanged: null, networkChanged: null });
+
+  useEffect(() => {
+    if (!isConnected || walletType !== 'unisat') {
+      // Clean up if not connected or not Unisat
+      return;
+    }
+
+    const unisat = getUnisat();
+    if (!unisat) return;
+
+    // Create handlers
+    const handleAccountsChanged = (accounts: unknown) => {
+      _handleAccountChange(accounts as string[]);
+    };
+
+    const handleNetworkChanged = (network: unknown) => {
+      _handleNetworkChange(network as string);
+    };
+
+    // Store refs
+    listenersRef.current.accountsChanged = handleAccountsChanged;
+    listenersRef.current.networkChanged = handleNetworkChanged;
+
+    // Register listeners
+    unisat.on('accountsChanged', handleAccountsChanged);
+    unisat.on('networkChanged', handleNetworkChanged);
+
+    console.log('[Wallet] Event listeners registered');
+
+    // Cleanup
+    return () => {
+      if (listenersRef.current.accountsChanged) {
+        unisat.removeListener('accountsChanged', listenersRef.current.accountsChanged);
+      }
+      if (listenersRef.current.networkChanged) {
+        unisat.removeListener('networkChanged', listenersRef.current.networkChanged);
+      }
+      console.log('[Wallet] Event listeners removed');
+    };
+  }, [isConnected, walletType, _handleAccountChange, _handleNetworkChange]);
+}
+
+// ============================================================================
 // Selectors (for optimized re-renders)
 // ============================================================================
 
@@ -372,3 +501,43 @@ export const selectAddress = (state: WalletState) => state.address;
 export const selectBalance = (state: WalletState) => state.balance;
 export const selectWalletType = (state: WalletState) => state.walletType;
 export const selectIsConnecting = (state: WalletState) => state.isConnecting;
+export const selectUtxos = (state: WalletState) => state.utxos;
+
+// ============================================================================
+// Convenience Hook (matches old useWallet API for easy migration)
+// ============================================================================
+
+/**
+ * Convenience hook that provides the same API as the old useWallet context.
+ * Use this for easy migration from the context-based approach.
+ */
+export function useWallet() {
+  const store = useWalletStore();
+
+  return {
+    // Connection state
+    isConnected: store.isConnected,
+    walletType: store.walletType,
+    isLoading: store.isConnecting,
+
+    // Account info
+    address: store.address,
+    publicKey: store.publicKey,
+    ordinalsAddress: store.ordinalsAddress,
+    paymentAddress: store.paymentAddress,
+
+    // Balance
+    balance: store.balance,
+    utxos: store.utxos,
+
+    // Actions
+    connect: store.connect,
+    disconnect: store.disconnect,
+    signPsbt: store.signPsbt,
+    signAndBroadcast: store.signAndBroadcast,
+    refreshBalance: store.refreshBalance,
+
+    // Status
+    error: store.error,
+  };
+}

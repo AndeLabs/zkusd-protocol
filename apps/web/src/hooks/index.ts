@@ -5,5 +5,8 @@ export {
   calculateCollateralForICR,
   calculateMaxDebtForICR,
 } from './use-vault-calculations';
-export { useTransaction, showToast } from './use-transaction';
+export { useTransaction } from './use-transaction';
 export { useVaultOperations } from './use-vault-operations';
+
+// Re-export showToast from the centralized error handler
+export { showToast } from '@/lib/error-handler';

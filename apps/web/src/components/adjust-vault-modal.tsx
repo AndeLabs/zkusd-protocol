@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWallet, useProtocol, useZkUsd } from '@/lib';
 import { formatBTC, formatZkUSD, calculateICR, calculateLiquidationPrice } from '@zkusd/utils';
 import { ICRBadge, ICRBar } from '@/components/shared';
+import { MCR, CCR } from '@/config';
 
 interface VaultState {
   id: string;
@@ -66,7 +67,7 @@ export function AdjustVaultModal({ vault, onClose, onSuccess }: AdjustVaultModal
   const isValidAdjustment = () => {
     if (!amount || parseFloat(amount) <= 0) return false;
     if (newCollateral < 0n || newDebt < 0n) return false;
-    if (newDebt > 0n && newICR < 11000) return false; // Below MCR
+    if (newDebt > 0n && newICR < MCR) return false; // Below MCR
     if (mode === 'collateral' && direction === 'remove' && amountSats > vault.collateral) return false;
     if (mode === 'debt' && direction === 'remove' && amountZkusd > vault.debt) return false;
     return true;
@@ -281,15 +282,15 @@ export function AdjustVaultModal({ vault, onClose, onSuccess }: AdjustVaultModal
         )}
 
         {/* Warnings */}
-        {newICR > 0 && newICR < 11000 && (
+        {newICR > 0 && newICR < MCR && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4 text-sm text-red-400">
-            CR would fall below 110% minimum. This adjustment is not allowed.
+            CR would fall below {MCR / 100}% minimum. This adjustment is not allowed.
           </div>
         )}
 
-        {newICR >= 11000 && newICR < 15000 && (
+        {newICR >= MCR && newICR < CCR && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4 text-sm text-yellow-400">
-            Warning: CR would be below 150%. Your vault would be at risk of liquidation.
+            Warning: CR would be below {CCR / 100}%. Your vault would be at risk of liquidation.
           </div>
         )}
 
