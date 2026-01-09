@@ -33,7 +33,7 @@ export function VaultInputForm({
   feeEstimates,
 }: VaultInputFormProps) {
   const { icr, fee, totalDebt, liquidationPrice, maxMintable, collateralUsd, feeRate, collateralSats, debtRaw } = calculations;
-  const { isValid, hasEnoughBalance, fundingUtxo } = validation;
+  const { isValid, hasEnoughBalance, hasEnoughUtxos, collateralUtxo, feeUtxo } = validation;
 
   const getIcrColor = () => {
     if (icr === 0) return 'text-zinc-500';
@@ -158,10 +158,12 @@ export function VaultInputForm({
         debtRaw={debtRaw}
         minDebt={minDebt}
         hasEnoughBalance={hasEnoughBalance}
+        hasEnoughUtxos={hasEnoughUtxos}
         collateralSats={collateralSats}
         balance={balance}
         isConnected={isConnected}
-        fundingUtxo={fundingUtxo}
+        collateralUtxo={collateralUtxo}
+        feeUtxo={feeUtxo}
       />
 
       {/* Submit Button */}
@@ -189,10 +191,12 @@ interface VaultWarningsProps {
   debtRaw: bigint;
   minDebt: bigint;
   hasEnoughBalance: boolean;
+  hasEnoughUtxos: boolean;
   collateralSats: bigint;
   balance: number;
   isConnected: boolean;
-  fundingUtxo: unknown;
+  collateralUtxo: unknown;
+  feeUtxo: unknown;
 }
 
 function VaultWarnings({
@@ -201,10 +205,12 @@ function VaultWarnings({
   debtRaw,
   minDebt,
   hasEnoughBalance,
+  hasEnoughUtxos,
   collateralSats,
   balance,
   isConnected,
-  fundingUtxo,
+  collateralUtxo,
+  feeUtxo,
 }: VaultWarningsProps) {
   return (
     <>
@@ -226,9 +232,16 @@ function VaultWarnings({
         </div>
       )}
 
-      {isConnected && collateralSats > 0n && !fundingUtxo && (
+      {isConnected && collateralSats > 0n && !collateralUtxo && (
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-400">
-          No confirmed UTXO large enough found. Wait for confirmation or add more BTC.
+          No confirmed UTXO large enough for collateral. Wait for confirmation or add more BTC.
+        </div>
+      )}
+
+      {isConnected && collateralSats > 0n && collateralUtxo && !feeUtxo && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-400">
+          <strong>Two separate UTXOs required.</strong> You need a second UTXO to pay transaction fees.
+          Send a small amount of BTC (0.0001+) to create an additional UTXO.
         </div>
       )}
     </>
