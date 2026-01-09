@@ -51,6 +51,7 @@ export interface ProverConfig {
   timeout?: number;
   retries?: number;
   retryDelayMs?: number;
+  demoMode?: boolean; // Enable demo mode (simulated responses, no actual proving)
 }
 
 // ============================================================================
@@ -69,6 +70,7 @@ const DEFAULT_CONFIG: Required<ProverConfig> = {
   timeout: 300_000,      // 5 minutes - proving can be slow
   retries: 3,
   retryDelayMs: 5_000,
+  demoMode: false,
 };
 
 // Retry delays for server errors (progressive backoff)
@@ -81,20 +83,43 @@ const RETRY_DELAYS = [3_000, 10_000, 15_000, 20_000, 25_000, 30_000];
 export class ProverService {
   private config: Required<ProverConfig>;
   private network: Network;
+  private isDemoMode: boolean;
 
   constructor(network: Network, config: ProverConfig = {}) {
     this.network = network;
+    // Auto-enable demo mode for testnet/signet if no custom API URL provided
+    // The public Charms prover only supports mainnet
+    const autoDemo = (network === 'testnet4' || network === 'signet') && !config.apiUrl;
+    this.isDemoMode = config.demoMode ?? autoDemo;
+
     this.config = {
       ...DEFAULT_CONFIG,
       apiUrl: config.apiUrl || PROVER_URLS[network],
+      demoMode: this.isDemoMode,
       ...config,
     };
+
+    if (this.isDemoMode) {
+      console.warn(`[ProverService] Running in DEMO MODE for ${network}. Transactions will be simulated.`);
+    }
+  }
+
+  /**
+   * Check if running in demo mode
+   */
+  isDemo(): boolean {
+    return this.isDemoMode;
   }
 
   /**
    * Prove a spell and get signed commit/spell transactions
    */
   async prove(request: ProveRequest): Promise<ProveResponse> {
+    // In demo mode, return simulated transactions
+    if (this.isDemoMode) {
+      return this.simulateProve(request);
+    }
+
     this.validateRequest(request);
 
     const body = JSON.stringify({
@@ -326,6 +351,60 @@ export class ProverService {
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Simulate a prove response for demo mode
+   * Creates deterministic fake transaction hex based on the request
+   */
+  private simulateProve(request: ProveRequest): ProveResponse {
+    // Create deterministic hashes based on request content
+    const seed = JSON.stringify(request.spell) + request.funding_utxo;
+    const hash1 = this.simpleHash(seed);
+    const hash2 = this.simpleHash(seed + 'spell');
+
+    // Generate fake transaction hex (looks realistic but is clearly demo)
+    // Format: version (4 bytes) + marker + flag + inputs + outputs + witness + locktime
+    const commitTxId = hash1.toString(16).padStart(64, '0');
+    const spellTxId = hash2.toString(16).padStart(64, '0');
+
+    // Build minimal valid-looking transaction hex
+    // 02000000 = version 2
+    // 0001 = segwit marker + flag
+    // 01 = 1 input
+    // [txid] = 32 bytes reversed
+    // 00000000 = vout
+    // 00 = empty scriptsig
+    // ffffffff = sequence
+    // 01 = 1 output
+    // [value] = 8 bytes little endian
+    // [scriptpubkey]
+    // 00 = empty witness
+    // 00000000 = locktime
+    const commitTx = `0200000001${commitTxId}00000000ffffffff0100000000000000000000000000`;
+    const spellTx = `0200000001${spellTxId}00000000ffffffff0100000000000000000000000000`;
+
+    console.warn('[ProverService DEMO] Simulated transactions generated');
+    console.warn('[ProverService DEMO] Commit TX:', commitTxId.slice(0, 16) + '...');
+    console.warn('[ProverService DEMO] Spell TX:', spellTxId.slice(0, 16) + '...');
+
+    return {
+      commitTx,
+      spellTx,
+    };
+  }
+
+  /**
+   * Simple hash function for deterministic ID generation
+   */
+  private simpleHash(input: string): number {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash);
   }
 }
 
