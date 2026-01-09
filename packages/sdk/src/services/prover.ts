@@ -12,6 +12,7 @@ export interface Spell {
   apps: Record<string, SpellApp | string>;  // Allow string app refs (v8 format) or full SpellApp objects
   ins: SpellInput[];
   outs: SpellOutput[];
+  private_inputs?: Record<string, unknown>;  // Witness data for spell execution
 }
 
 export interface SpellApp {
