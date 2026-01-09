@@ -133,8 +133,18 @@ export class ProverService {
     // prev_txs must be wrapped as { "bitcoin": "tx_hex" } objects
     const wrappedPrevTxs = request.prev_txs.map(txHex => ({ bitcoin: txHex }));
 
+    // Transform spell inputs: 'utxo' -> 'utxo_id' (API format)
+    const transformedSpell = {
+      ...request.spell,
+      ins: request.spell.ins.map(input => ({
+        utxo_id: (input as { utxo?: string; utxo_id?: string }).utxo ||
+                 (input as { utxo?: string; utxo_id?: string }).utxo_id,
+        charms: input.charms || {},
+      })),
+    };
+
     const requestBody = {
-      spell: request.spell,
+      spell: transformedSpell,
       binaries: request.binaries,
       prev_txs: wrappedPrevTxs,
       funding_utxo: request.funding_utxo,
