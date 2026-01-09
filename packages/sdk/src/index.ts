@@ -11,6 +11,8 @@ export {
   BitcoinApiService,
   ProverService,
   ProverError,
+  BinaryService,
+  getBinaryService,
 } from './services';
 
 export type {
@@ -26,6 +28,8 @@ export type {
   ProveResponse,
   ProverConfig,
   ProverErrorCode,
+  BinaryConfig,
+  BinaryCache,
 } from './services';
 
 // Re-export types for convenience

@@ -17,6 +17,7 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
       spellTx: '03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4',
       stateUtxo: '03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4:0',
       status: 'confirmed',
+      wasmPath: '/wasm/zkusd-price-oracle-app.wasm',
     },
     zkusdToken: {
       appId: 'eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540',
@@ -25,6 +26,7 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
       spellTx: '458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423',
       stateUtxo: '458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423:0',
       status: 'confirmed',
+      wasmPath: '/wasm/zkusd-token-app.wasm',
     },
     vaultManager: {
       appId: 'c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490',
@@ -33,6 +35,7 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
       spellTx: 'b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3',
       stateUtxo: 'b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3:0',
       status: 'confirmed',
+      wasmPath: '/wasm/zkusd-vault-manager-app.wasm',
     },
     stabilityPool: {
       appId: 'c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf',
@@ -41,6 +44,7 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
       spellTx: 'ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c',
       stateUtxo: 'ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c:0',
       status: 'confirmed',
+      wasmPath: '/wasm/zkusd-stability-pool-app.wasm',
     },
   },
 

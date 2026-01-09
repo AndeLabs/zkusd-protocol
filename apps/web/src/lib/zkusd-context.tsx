@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
-import { ZkUsdClient, type FeeEstimates } from '@zkusd/sdk';
+import { ZkUsdClient, type FeeEstimates, getBinaryService, type BinaryCache } from '@zkusd/sdk';
 import { useNetwork } from './network-context';
 import { useWallet } from './wallet-context';
 import type { DeploymentConfig, OraclePrice } from '@zkusd/types';
@@ -10,6 +10,9 @@ import { REFRESH_INTERVALS, CACHE_TTL } from '@/config';
 // ============================================================================
 // Types
 // ============================================================================
+
+/** Apps that require binaries for prover */
+type AppType = 'vaultManager' | 'zkusdToken' | 'priceOracle' | 'stabilityPool';
 
 interface ZkUsdContextType {
   // Client
@@ -33,6 +36,11 @@ interface ZkUsdContextType {
   // Block
   blockHeight: number | null;
   refreshBlockHeight: () => Promise<void>;
+
+  // Binaries
+  loadBinaries: (apps: AppType[]) => Promise<BinaryCache>;
+  binariesLoaded: Set<string>;
+  isLoadingBinaries: boolean;
 
   // Error
   error: string | null;
@@ -72,6 +80,10 @@ export function ZkUsdProvider({ children }: { children: ReactNode }) {
 
   // Error
   const [error, setError] = useState<string | null>(null);
+
+  // Binaries
+  const [binariesLoaded, setBinariesLoaded] = useState<Set<string>>(new Set());
+  const [isLoadingBinaries, setIsLoadingBinaries] = useState(false);
 
   // ============================================================================
   // Initialize client when network changes
@@ -163,6 +175,61 @@ export function ZkUsdProvider({ children }: { children: ReactNode }) {
   }, [client]);
 
   // ============================================================================
+  // Binary loading
+  // ============================================================================
+
+  /**
+   * Load app binaries for the prover.
+   * The prover requires WASM binaries for each app used in a spell.
+   */
+  const loadBinaries = useCallback(async (apps: AppType[]): Promise<BinaryCache> => {
+    if (!deploymentConfig) {
+      throw new Error('Deployment config not loaded');
+    }
+
+    setIsLoadingBinaries(true);
+
+    try {
+      const binaryService = getBinaryService();
+      const configs = apps.map(app => {
+        const contract = deploymentConfig.contracts[app];
+        if (!contract) {
+          throw new Error(`Unknown app: ${app}`);
+        }
+
+        // Get WASM path from config (falls back to convention if not set)
+        const wasmPath = (contract as { wasmPath?: string }).wasmPath ||
+          `/wasm/zkusd-${app.replace(/([A-Z])/g, '-$1').toLowerCase()}-app.wasm`;
+
+        return {
+          vk: contract.vk,
+          url: wasmPath,
+          name: app,
+        };
+      });
+
+      const binaries = await binaryService.loadBinaries(configs);
+
+      // Track which VKs are loaded
+      setBinariesLoaded(prev => {
+        const next = new Set(prev);
+        for (const vk of Object.keys(binaries)) {
+          next.add(vk);
+        }
+        return next;
+      });
+
+      console.log(`[ZkUsd] Loaded binaries for: ${apps.join(', ')}`);
+      return binaries;
+    } catch (err) {
+      console.error('Failed to load binaries:', err);
+      throw err;
+    } finally {
+      setIsLoadingBinaries(false);
+    }
+  }, [deploymentConfig]);
+
+  // ============================================================================
   // Auto-refresh
   // ============================================================================
 
@@ -211,6 +278,9 @@ export function ZkUsdProvider({ children }: { children: ReactNode }) {
         refreshFees,
         blockHeight,
         refreshBlockHeight,
+        loadBinaries,
+        binariesLoaded,
+        isLoadingBinaries,
         error,
       }}
     >
