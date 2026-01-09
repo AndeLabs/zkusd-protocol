@@ -87,10 +87,9 @@ export class ProverService {
 
   constructor(network: Network, config: ProverConfig = {}) {
     this.network = network;
-    // Auto-enable demo mode for testnet/signet if no custom API URL provided
-    // The public Charms prover only supports mainnet
-    const autoDemo = (network === 'testnet4' || network === 'signet') && !config.apiUrl;
-    this.isDemoMode = config.demoMode ?? autoDemo;
+    // Demo mode only enabled explicitly via config
+    // The public Charms prover supports both mainnet and testnet4
+    this.isDemoMode = config.demoMode ?? false;
 
     this.config = {
       ...DEFAULT_CONFIG,
@@ -122,7 +121,9 @@ export class ProverService {
 
     this.validateRequest(request);
 
-    const body = JSON.stringify({
+    // Build request body with chain parameter
+    // Note: chain is 'bitcoin' for both mainnet and testnet4
+    const requestBody = {
       spell: request.spell,
       binaries: request.binaries,
       prev_txs: request.prev_txs,
@@ -130,7 +131,15 @@ export class ProverService {
       funding_utxo_value: request.funding_utxo_value,
       change_address: request.change_address,
       fee_rate: request.fee_rate,
-    });
+      chain: 'bitcoin', // Required by Charms API
+    };
+
+    console.log('[ProverService] Sending request to:', this.config.apiUrl);
+    console.log('[ProverService] Network:', this.network);
+    console.log('[ProverService] Funding UTXO:', request.funding_utxo);
+    console.log('[ProverService] Change address:', request.change_address);
+
+    const body = JSON.stringify(requestBody);
 
     let lastError: Error | null = null;
     let attempt = 0;
