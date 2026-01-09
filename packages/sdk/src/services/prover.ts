@@ -91,12 +91,19 @@ export class ProverService {
     // The public Charms prover supports both mainnet and testnet4
     this.isDemoMode = config.demoMode ?? false;
 
+    // Build config carefully - don't let undefined values overwrite defaults
+    const apiUrl = config.apiUrl ?? PROVER_URLS[network] ?? DEFAULT_CONFIG.apiUrl;
+
     this.config = {
       ...DEFAULT_CONFIG,
-      apiUrl: config.apiUrl || PROVER_URLS[network],
+      apiUrl,
       demoMode: this.isDemoMode,
-      ...config,
+      timeout: config.timeout ?? DEFAULT_CONFIG.timeout,
+      retries: config.retries ?? DEFAULT_CONFIG.retries,
+      retryDelayMs: config.retryDelayMs ?? DEFAULT_CONFIG.retryDelayMs,
     };
+
+    console.log(`[ProverService] Initialized for ${network} with URL: ${this.config.apiUrl}`);
 
     if (this.isDemoMode) {
       console.warn(`[ProverService] Running in DEMO MODE for ${network}. Transactions will be simulated.`);
