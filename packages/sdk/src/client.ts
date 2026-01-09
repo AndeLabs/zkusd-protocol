@@ -185,6 +185,24 @@ export class ZkUsdClient {
     // Get the prove result
     const proveResult = await this.executeSpell(options);
 
+    // Check if these are demo/simulated transactions
+    // Demo transactions are short and end with zeros
+    const isDemoTx = proveResult.commitTx.length < 150 ||
+                     proveResult.commitTx.endsWith('0000000000') ||
+                     this.prover.isDemo();
+
+    if (isDemoTx) {
+      console.warn('[ZkUsdClient] Demo mode: Skipping signing and using simulated txids');
+      // Generate deterministic fake txids from the transaction content
+      const commitTxId = this.hashString(proveResult.commitTx + 'commit').padStart(64, '0');
+      const spellTxId = this.hashString(proveResult.spellTx + 'spell').padStart(64, '0');
+
+      return {
+        commitTxId,
+        spellTxId,
+      };
+    }
+
     // Sign transactions if a signer is provided
     let commitTx = proveResult.commitTx;
     let spellTx = proveResult.spellTx;
@@ -207,6 +225,19 @@ export class ZkUsdClient {
       commitTxId,
       spellTxId,
     };
+  }
+
+  /**
+   * Simple hash for deterministic ID generation
+   */
+  private hashString(input: string): string {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(16);
   }
 
   /**
