@@ -31,7 +31,7 @@ export function useVaultForm() {
   const { oracle, protocol } = useProtocol();
   const { isConnected, address, balance, utxos, signPsbt, refreshBalance } = useWallet();
   const { config } = useNetwork();
-  const { client, btcPrice: zkusdBtcPrice, feeEstimates, deploymentConfig, isReady } = useZkUsd();
+  const { client, btcPrice: zkusdBtcPrice, feeEstimates, deploymentConfig, isReady, loadBinaries } = useZkUsd();
 
   // Form state
   const [collateralBtc, setCollateralBtc] = useState('');
@@ -207,6 +207,12 @@ export function useVaultForm() {
     try {
       setFormStep('signing');
 
+      // Load app binaries for the prover
+      // Open vault uses vaultManager and zkusdToken apps
+      console.log('[OpenVault] Loading app binaries...');
+      const binaries = await loadBinaries(['vaultManager', 'zkusdToken']);
+      console.log('[OpenVault] Binaries loaded:', Object.keys(binaries).length, 'apps');
+
       const fundingUtxoId = `${validation.fundingUtxo.txid}:${validation.fundingUtxo.vout}`;
 
       // Build the spell
@@ -231,7 +237,7 @@ export function useVaultForm() {
       // Execute and broadcast
       const result = await client.executeAndBroadcast({
         spell,
-        binaries: {},
+        binaries,
         prevTxs: [prevTxHex],
         fundingUtxo: fundingUtxoId,
         fundingUtxoValue: validation.fundingUtxo.value,
@@ -268,7 +274,7 @@ export function useVaultForm() {
       setErrorMessage(message);
       setFormStep('error');
     }
-  }, [client, deploymentConfig, validation.fundingUtxo, address, calculations, signPsbt, refreshBalance]);
+  }, [client, deploymentConfig, validation.fundingUtxo, address, calculations, signPsbt, refreshBalance, loadBinaries]);
 
   // ============================================================================
   // Return

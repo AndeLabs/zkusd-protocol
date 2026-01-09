@@ -11,6 +11,8 @@ dist
 .next
 out
 *.wasm
+# Allow WASM files in web public folder for prover
+!apps/web/public/wasm/*.wasm
 
 # Turbo
 .turbo

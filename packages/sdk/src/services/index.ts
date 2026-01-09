@@ -14,3 +14,6 @@ export type {
   ProverConfig,
   ProverErrorCode,
 } from './prover';
+
+export { BinaryService, getBinaryService } from './binary';
+export type { BinaryConfig, BinaryCache } from './binary';

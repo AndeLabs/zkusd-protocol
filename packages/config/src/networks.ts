@@ -9,6 +9,8 @@ export interface ContractDeployment {
   spellTx: string;
   stateUtxo: string;
   status: 'confirmed' | 'in_mempool' | 'pending';
+  /** Path to the WASM binary (for prover) */
+  wasmPath?: string;
 }
 
 export interface NetworkDeployment {
