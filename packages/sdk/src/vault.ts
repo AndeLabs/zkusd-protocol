@@ -186,6 +186,10 @@ export class VaultService {
         '$00': vmAppRef,
         '$01': tokenAppRef,
       },
+      // Private inputs (witness data) for vault ID generation
+      private_inputs: {
+        '$00': params.fundingUtxo, // Used to generate deterministic vault ID
+      },
       ins: [
         {
           utxo: params.fundingUtxo,
