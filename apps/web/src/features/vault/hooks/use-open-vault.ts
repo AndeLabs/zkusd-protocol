@@ -86,7 +86,7 @@ export function useOpenVault() {
         });
 
         setStatus('proving');
-        toast.loading('Generating zero-knowledge proof...', { id: 'vault-tx' });
+        toast.loading('Loading app binaries...', { id: 'vault-tx' });
 
         // Get previous transaction hex for the funding UTXO
         const prevTxHex = await client.getRawTransaction(fundingUtxo.txid);
@@ -94,15 +94,41 @@ export function useOpenVault() {
         // Get deployment config for app binaries
         const config = await client.getDeploymentConfig();
 
+        // Validate WASM paths exist
+        if (!config.contracts.vaultManager.wasmPath || !config.contracts.zkusdToken.wasmPath) {
+          throw new Error('WASM binary paths not configured for this network');
+        }
+
+        // Load WASM binaries and encode as base64
+        const loadBinary = async (path: string): Promise<string> => {
+          const response = await fetch(path);
+          if (!response.ok) throw new Error(`Failed to load binary: ${path}`);
+          const buffer = await response.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = '';
+          for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          return btoa(binary);
+        };
+
+        const [vmBinary, tokenBinary] = await Promise.all([
+          loadBinary(config.contracts.vaultManager.wasmPath),
+          loadBinary(config.contracts.zkusdToken.wasmPath),
+        ]);
+
+        toast.loading('Generating zero-knowledge proof...', { id: 'vault-tx' });
+
         // Get fee estimate
         const fees = await client.getFeeEstimates();
 
         // Execute the spell through the prover
+        // Binaries are keyed by VK (verification key)
         const proveResult = await client.executeSpell({
           spell,
           binaries: {
-            [config.contracts.vaultManager.appId]: config.contracts.vaultManager.vk,
-            [config.contracts.zkusdToken.appId]: config.contracts.zkusdToken.vk,
+            [config.contracts.vaultManager.vk]: vmBinary,
+            [config.contracts.zkusdToken.vk]: tokenBinary,
           },
           prevTxs: [prevTxHex],
           fundingUtxo: fundingUtxoId,
