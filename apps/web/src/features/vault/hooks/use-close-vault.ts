@@ -1,0 +1,200 @@
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { useWallet } from '@/stores/wallet';
+import { useVaultsStore, type TrackedVault } from '@/stores/vaults';
+import { getClient } from '@/lib/sdk';
+
+export interface CloseVaultParams {
+  vault: TrackedVault;
+}
+
+export interface CloseVaultResult {
+  txId: string;
+  recoveredCollateral: bigint;
+}
+
+type CloseStatus =
+  | 'idle'
+  | 'building_spell'
+  | 'proving'
+  | 'signing'
+  | 'broadcasting'
+  | 'success'
+  | 'error';
+
+export function useCloseVault() {
+  const { address, isConnected } = useWallet();
+  const removeVault = useVaultsStore((s) => s.removeVault);
+  const [status, setStatus] = useState<CloseStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  const closeVault = useCallback(
+    async (params: CloseVaultParams): Promise<CloseVaultResult> => {
+      if (!isConnected || !address) {
+        throw new Error('Wallet not connected');
+      }
+
+      if (!window.unisat) {
+        throw new Error('Unisat wallet not found');
+      }
+
+      // Check if vault has debt
+      const totalDebt =
+        params.vault.debt +
+        params.vault.accruedInterest +
+        params.vault.redistributedDebt;
+
+      if (totalDebt > 0n) {
+        // Cannot close vault with debt without zkUSD to repay
+        // This requires the Charms indexer to find zkUSD UTXOs
+        toast.error('Cannot close vault with outstanding debt', {
+          id: 'close-tx',
+          description: `You need ${(Number(totalDebt) / 1e8).toFixed(2)} zkUSD to repay the debt. Debt repayment requires a Charms indexer.`,
+        });
+        throw new Error('Vault has outstanding debt that must be repaid');
+      }
+
+      const client = getClient();
+
+      try {
+        setStatus('building_spell');
+        setError(null);
+
+        // For zero-debt vaults, we can close without zkUSD
+        // The vault NFT is burned and collateral is returned
+        const currentBlock = await client.getBlockHeight();
+
+        // Build close spell (simplified for zero-debt vault)
+        const spell = await client.vault.buildCloseVaultSpell({
+          vaultUtxo: params.vault.utxo,
+          vaultState: {
+            id: params.vault.id,
+            owner: params.vault.owner,
+            collateral: params.vault.collateral,
+            debt: params.vault.debt,
+            createdAt: params.vault.createdAt,
+            lastUpdated: params.vault.lastUpdated,
+            interestRateBps: params.vault.interestRateBps,
+            accruedInterest: params.vault.accruedInterest,
+            redistributedDebt: params.vault.redistributedDebt,
+            redistributedCollateral: params.vault.redistributedCollateral,
+            insuranceBalance: params.vault.insuranceBalance,
+          },
+          ownerAddress: address,
+          zkusdUtxo: '', // No zkUSD needed for zero-debt vault
+          zkusdAmount: 0n,
+        });
+
+        setStatus('proving');
+        toast.loading('Generating zero-knowledge proof...', { id: 'close-tx' });
+
+        // Get previous transaction
+        const vaultTxId = params.vault.utxo.split(':')[0];
+        const prevTxHex = await client.getRawTransaction(vaultTxId);
+
+        // Get deployment config
+        const config = await client.getDeploymentConfig();
+
+        // Get fee estimate
+        const fees = await client.getFeeEstimates();
+
+        // Execute the spell
+        const proveResult = await client.executeSpell({
+          spell,
+          binaries: {
+            [config.contracts.vaultManager.appId]: config.contracts.vaultManager.vk,
+            [config.contracts.zkusdToken.appId]: config.contracts.zkusdToken.vk,
+          },
+          prevTxs: [prevTxHex],
+          fundingUtxo: params.vault.utxo,
+          fundingUtxoValue: Number(params.vault.collateral),
+          changeAddress: address,
+          feeRate: fees.halfHourFee,
+        });
+
+        setStatus('signing');
+        toast.loading('Please sign the transaction in your wallet...', {
+          id: 'close-tx',
+        });
+
+        // Sign transactions
+        let signedCommitTx: string;
+        let signedSpellTx: string;
+
+        try {
+          signedCommitTx = await window.unisat.signPsbt(proveResult.commitTx, {
+            autoFinalized: true,
+          });
+          signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
+            autoFinalized: true,
+          });
+        } catch {
+          signedCommitTx = proveResult.commitTx;
+          signedSpellTx = proveResult.spellTx;
+        }
+
+        setStatus('broadcasting');
+        toast.loading('Broadcasting transaction...', { id: 'close-tx' });
+
+        // Broadcast transactions
+        await client.bitcoin.broadcast(signedCommitTx);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const spellTxId = await client.bitcoin.broadcast(signedSpellTx);
+
+        // Remove vault from local storage
+        removeVault(params.vault.id);
+
+        setStatus('success');
+        toast.success('Vault closed successfully!', {
+          id: 'close-tx',
+          description: `Recovered ${(Number(params.vault.collateral) / 1e8).toFixed(8)} BTC`,
+          action: {
+            label: 'View',
+            onClick: () => {
+              window.open(client.getTxUrl(spellTxId), '_blank');
+            },
+          },
+        });
+
+        return {
+          txId: spellTxId,
+          recoveredCollateral: params.vault.collateral,
+        };
+      } catch (err) {
+        setStatus('error');
+        const message = err instanceof Error ? err.message : 'Failed to close vault';
+        setError(message);
+        toast.error('Failed to close vault', {
+          id: 'close-tx',
+          description: message,
+        });
+        throw err;
+      }
+    },
+    [isConnected, address, removeVault]
+  );
+
+  const mutation = useMutation({
+    mutationFn: closeVault,
+  });
+
+  const reset = useCallback(() => {
+    setStatus('idle');
+    setError(null);
+    mutation.reset();
+  }, [mutation]);
+
+  return {
+    closeVault: mutation.mutateAsync,
+    status,
+    error,
+    isLoading: mutation.isPending,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError,
+    data: mutation.data,
+    reset,
+  };
+}
