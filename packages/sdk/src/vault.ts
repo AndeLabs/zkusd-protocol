@@ -54,6 +54,25 @@ const MCR_BPS = 11_000;
 // ============================================================================
 
 /**
+ * Safely convert bigint to number, throwing if precision would be lost.
+ * JavaScript's Number.MAX_SAFE_INTEGER is 9,007,199,254,740,991 (2^53 - 1).
+ */
+function safeToNumber(value: bigint, fieldName: string): number {
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error(
+      `Value overflow in ${fieldName}: ${value} exceeds safe integer range. ` +
+      `Maximum safe value is ${Number.MAX_SAFE_INTEGER}`
+    );
+  }
+  if (value < BigInt(Number.MIN_SAFE_INTEGER)) {
+    throw new Error(
+      `Value underflow in ${fieldName}: ${value} is below safe integer range.`
+    );
+  }
+  return Number(value);
+}
+
+/**
  * Generate vault ID from funding UTXO (deterministic).
  *
  * In production, this should use a proper cryptographic hash (SHA256).
@@ -232,8 +251,8 @@ export class VaultService {
     const vaultState = {
       id: vaultId,
       owner: params.ownerPubkey,
-      collateral: Number(params.collateral),
-      debt: Number(totalDebt),
+      collateral: safeToNumber(params.collateral, 'collateral'),
+      debt: safeToNumber(totalDebt, 'debt'),
       created_at: currentBlock,
       last_updated: currentBlock,
       status: VAULT_STATUS_ACTIVE,
@@ -263,7 +282,7 @@ export class VaultService {
         // Output 2: Minted zkUSD
         {
           address: params.ownerAddress,
-          charms: { '$01': Number(params.debt) },
+          charms: { '$01': safeToNumber(params.debt, 'debt') },
         },
         // Output 3: Change
         {
@@ -325,16 +344,16 @@ export class VaultService {
           '$00': {
             id: params.vaultState.id,
             owner: params.vaultState.owner,
-            collateral: Number(params.vaultState.collateral),
-            debt: Number(params.vaultState.debt),
+            collateral: safeToNumber(params.vaultState.collateral, 'vaultState.collateral'),
+            debt: safeToNumber(params.vaultState.debt, 'vaultState.debt'),
             created_at: params.vaultState.createdAt,
             last_updated: params.vaultState.lastUpdated,
             status: 0,
             interest_rate_bps: params.vaultState.interestRateBps,
-            accrued_interest: Number(params.vaultState.accruedInterest),
-            redistributed_debt: Number(params.vaultState.redistributedDebt),
-            redistributed_collateral: Number(params.vaultState.redistributedCollateral),
-            insurance_balance: Number(params.vaultState.insuranceBalance),
+            accrued_interest: safeToNumber(params.vaultState.accruedInterest, 'accruedInterest'),
+            redistributed_debt: safeToNumber(params.vaultState.redistributedDebt, 'redistributedDebt'),
+            redistributed_collateral: safeToNumber(params.vaultState.redistributedCollateral, 'redistributedCollateral'),
+            insurance_balance: safeToNumber(params.vaultState.insuranceBalance, 'insuranceBalance'),
           },
         },
       },
@@ -353,7 +372,7 @@ export class VaultService {
       inputs.push({
         utxo: params.zkusdUtxo,
         charms: {
-          '$01': Number(params.zkusdAmount),
+          '$01': safeToNumber(params.zkusdAmount ?? 0n, 'zkusdAmount'),
         },
       });
     }
@@ -367,16 +386,16 @@ export class VaultService {
           '$00': {
             id: params.vaultState.id,
             owner: params.vaultState.owner,
-            collateral: Number(newCollateral),
-            debt: Number(newDebt),
+            collateral: safeToNumber(newCollateral, 'newCollateral'),
+            debt: safeToNumber(newDebt, 'newDebt'),
             created_at: params.vaultState.createdAt,
             last_updated: currentBlock,
             status: 0,
             interest_rate_bps: params.vaultState.interestRateBps,
-            accrued_interest: Number(params.vaultState.accruedInterest),
-            redistributed_debt: Number(params.vaultState.redistributedDebt),
-            redistributed_collateral: Number(params.vaultState.redistributedCollateral),
-            insurance_balance: Number(params.vaultState.insuranceBalance),
+            accrued_interest: safeToNumber(params.vaultState.accruedInterest, 'accruedInterest'),
+            redistributed_debt: safeToNumber(params.vaultState.redistributedDebt, 'redistributedDebt'),
+            redistributed_collateral: safeToNumber(params.vaultState.redistributedCollateral, 'redistributedCollateral'),
+            insurance_balance: safeToNumber(params.vaultState.insuranceBalance, 'insuranceBalance'),
           },
         },
       },
@@ -387,7 +406,7 @@ export class VaultService {
       outputs.push({
         address: params.ownerAddress,
         charms: {
-          '$01': Number(params.debtChange),
+          '$01': safeToNumber(params.debtChange, 'debtChange'),
         },
       });
     }
@@ -462,16 +481,16 @@ export class VaultService {
             '$00': {
               id: params.vaultState.id,
               owner: params.vaultState.owner,
-              collateral: Number(params.vaultState.collateral),
-              debt: Number(params.vaultState.debt),
+              collateral: safeToNumber(params.vaultState.collateral, 'vaultState.collateral'),
+              debt: safeToNumber(params.vaultState.debt, 'vaultState.debt'),
               created_at: params.vaultState.createdAt,
               last_updated: params.vaultState.lastUpdated,
               status: 0,
               interest_rate_bps: params.vaultState.interestRateBps,
-              accrued_interest: Number(params.vaultState.accruedInterest),
-              redistributed_debt: Number(params.vaultState.redistributedDebt),
-              redistributed_collateral: Number(params.vaultState.redistributedCollateral),
-              insurance_balance: Number(params.vaultState.insuranceBalance),
+              accrued_interest: safeToNumber(params.vaultState.accruedInterest, 'accruedInterest'),
+              redistributed_debt: safeToNumber(params.vaultState.redistributedDebt, 'redistributedDebt'),
+              redistributed_collateral: safeToNumber(params.vaultState.redistributedCollateral, 'redistributedCollateral'),
+              insurance_balance: safeToNumber(params.vaultState.insuranceBalance, 'insuranceBalance'),
             },
           },
         },
@@ -479,7 +498,7 @@ export class VaultService {
         {
           utxo: params.zkusdUtxo,
           charms: {
-            '$01': Number(params.zkusdAmount),
+            '$01': safeToNumber(params.zkusdAmount ?? 0n, 'zkusdAmount'),
           },
         },
       ],
