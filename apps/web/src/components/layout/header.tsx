@@ -1,0 +1,67 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { formatBTC, formatUSD } from '@/lib/utils';
+import { usePrice } from '@/hooks/use-price';
+import { ConnectButton } from '@/components/wallet/connect-button';
+import { Badge } from '@/components/ui';
+
+export function Header() {
+  const { data: priceData, isLoading: priceLoading } = usePrice();
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20"
+            >
+              <span className="text-white font-bold text-sm">zk</span>
+            </motion.div>
+            <span className="text-xl font-bold bg-gradient-to-r from-amber-200 to-orange-400 bg-clip-text text-transparent">
+              zkUSD
+            </span>
+          </Link>
+
+          {/* Center: Price Display */}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-zinc-400">BTC</span>
+              {priceLoading ? (
+                <span className="text-zinc-500 animate-pulse">Loading...</span>
+              ) : priceData ? (
+                <span className="font-mono text-white">
+                  {formatUSD(priceData.price)}
+                </span>
+              ) : (
+                <span className="text-zinc-500">--</span>
+              )}
+            </div>
+            <Badge variant="warning" size="sm">
+              Testnet4
+            </Badge>
+          </div>
+
+          {/* Right: Wallet */}
+          <div className="flex items-center gap-3">
+            {/* Mobile price */}
+            <div className="md:hidden text-sm">
+              {priceData && (
+                <span className="font-mono text-zinc-400">
+                  ${Math.round(priceData.price).toLocaleString()}
+                </span>
+              )}
+            </div>
+
+            <ConnectButton />
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
