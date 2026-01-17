@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useWallet } from '@/stores/wallet';
@@ -13,7 +13,11 @@ import { formatBTC, formatZkUSD, calculateICR } from '@/lib/utils';
 
 export function PositionsSummary() {
   const { isConnected, connect, address, publicKey } = useWallet();
-  const vaults = useVaultsStore((s) => s.getVaultsByOwner(publicKey || ''));
+  const allVaults = useVaultsStore((s) => s.vaults);
+  const vaults = useMemo(
+    () => allVaults.filter((v) => v.owner === (publicKey || '')),
+    [allVaults, publicKey]
+  );
   const { data: spDeposit, isLoading: spLoading } = useUserDeposit();
   const { data: priceData } = usePrice();
 
