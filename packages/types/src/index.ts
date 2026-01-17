@@ -163,6 +163,7 @@ export interface CharmApp {
   appId: string;
   vk: string;
   appRef: string; // n/{appId}/{vk} or t/{appId}/{vk}
+  wasmPath?: string; // Path to WASM binary for prover
 }
 
 export interface SpellInput {
