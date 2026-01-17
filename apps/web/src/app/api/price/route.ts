@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 // Cache duration in seconds
 const CACHE_DURATION = 30;
 
+// Request timeout in milliseconds
+const REQUEST_TIMEOUT = 5000;
+
 interface PriceResponse {
   price: number;
   source: string;
@@ -13,6 +16,22 @@ interface ErrorResponse {
   error: string;
 }
 
+// Helper to fetch with timeout
+async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * GET /api/price
  * Fetches real-time BTC/USD price from multiple sources with fallbacks
@@ -20,7 +39,7 @@ interface ErrorResponse {
 export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>> {
   // Try CoinGecko first
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
       {
         next: { revalidate: CACHE_DURATION },
@@ -42,13 +61,13 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
         });
       }
     }
-  } catch (err) {
-    console.warn('CoinGecko API failed:', err);
+  } catch {
+    // CoinGecko failed, try next source
   }
 
   // Fallback: Coinbase
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       'https://api.coinbase.com/v2/prices/BTC-USD/spot',
       {
         next: { revalidate: CACHE_DURATION },
@@ -70,13 +89,13 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
         });
       }
     }
-  } catch (err) {
-    console.warn('Coinbase API failed:', err);
+  } catch {
+    // Coinbase failed, try next source
   }
 
   // Second fallback: Kraken
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       'https://api.kraken.com/0/public/Ticker?pair=XBTUSD',
       {
         next: { revalidate: CACHE_DURATION },
@@ -99,13 +118,13 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
         });
       }
     }
-  } catch (err) {
-    console.warn('Kraken API failed:', err);
+  } catch {
+    // Kraken failed, try next source
   }
 
   // Third fallback: Binance
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
       {
         next: { revalidate: CACHE_DURATION },
@@ -127,8 +146,8 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
         });
       }
     }
-  } catch (err) {
-    console.warn('Binance API failed:', err);
+  } catch {
+    // Binance failed
   }
 
   // All APIs failed

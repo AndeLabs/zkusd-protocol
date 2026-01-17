@@ -13,15 +13,18 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.16",
     "@zkusd/config": "workspace:*",
     "@zkusd/sdk": "workspace:*",
     "@zkusd/types": "workspace:*",
     "@zkusd/utils": "workspace:*",
+    "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
     "next": "^15.1.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sonner": "^2.0.7",
+    "tailwind-merge": "^3.4.0",
     "zod": "^4.3.5",
     "zustand": "^5.0.9"
   },
