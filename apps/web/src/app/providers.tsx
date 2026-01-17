@@ -1,33 +1,46 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
-import { NetworkProvider, ProtocolProvider, WalletProvider, ZkUsdProvider } from '@/lib';
+import { ErrorBoundary } from '@/components/ui';
 
-export function Providers({ children }: { children: ReactNode }) {
+interface ProvidersProps {
+  children: ReactNode;
+}
+
+export function Providers({ children }: ProvidersProps) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000, // 1 minute
+            refetchOnWindowFocus: false,
+            retry: 2,
+          },
+        },
+      })
+  );
+
   return (
-    <NetworkProvider>
-      <WalletProvider>
-        <ZkUsdProvider>
-          <ProtocolProvider>
-            {children}
-            <Toaster
-              position="bottom-right"
-              theme="dark"
-              toastOptions={{
-                style: {
-                  background: '#18181b',
-                  border: '1px solid #27272a',
-                  color: '#fafafa',
-                },
-                className: 'font-sans',
-              }}
-              richColors
-              closeButton
-            />
-          </ProtocolProvider>
-        </ZkUsdProvider>
-      </WalletProvider>
-    </NetworkProvider>
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
+        {children}
+      </ErrorBoundary>
+      <Toaster
+        position="bottom-right"
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: '#18181b',
+            border: '1px solid #27272a',
+            color: '#fafafa',
+          },
+        }}
+        richColors
+        closeButton
+      />
+    </QueryClientProvider>
   );
 }

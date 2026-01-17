@@ -1,79 +1,74 @@
-import { PageLayout } from '@/components/shared';
-import { ProtocolStats, ContractStatus } from '@/components/protocol-stats';
-import { VaultDashboard } from '@/components/vault-dashboard';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
+import { StatsBar } from '@/components/protocol';
+import { ActionCard } from '@/components/action-card';
 
 export default function HomePage() {
   return (
-    <PageLayout
-      title="Bitcoin-Native Stablecoin"
-      description="Mint zkUSD by depositing BTC as collateral. Powered by zero-knowledge proofs on Bitcoin via Charms."
-    >
+    <div className="min-h-screen bg-zinc-950 flex flex-col">
+      <Header />
 
-      {/* Protocol Stats */}
-      <ProtocolStats />
-
-      {/* Main Content */}
-      <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Vault Dashboard - 2 cols */}
-        <div className="lg:col-span-2">
-          <VaultDashboard />
+      <main className="flex-1 container mx-auto px-4 py-8">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-amber-200 to-orange-400 bg-clip-text text-transparent">
+            Bitcoin-Native Stablecoin
+          </h1>
+          <p className="text-base text-zinc-400 max-w-xl mx-auto">
+            Mint zkUSD by depositing BTC as collateral. Powered by zero-knowledge
+            proofs on Bitcoin via Charms Protocol.
+          </p>
         </div>
 
-        {/* Sidebar - 1 col */}
-        <div className="space-y-4 sm:space-y-6">
-          <ContractStatus />
+        {/* Protocol Stats */}
+        <div className="max-w-3xl mx-auto mb-8">
+          <StatsBar />
+        </div>
 
-          {/* How It Works */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5">
-            <h3 className="text-fluid-lg font-semibold mb-4">How It Works</h3>
-            <ol className="space-y-3 text-fluid-sm text-zinc-400">
-              <li className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">1</span>
-                <span className="pt-0.5">Connect your Bitcoin wallet (Unisat, Xverse)</span>
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">2</span>
-                <span className="pt-0.5">Deposit BTC as collateral (min 110% CR)</span>
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">3</span>
-                <span className="pt-0.5">Mint zkUSD stablecoins (1:1 with USD)</span>
-              </li>
-              <li className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">4</span>
-                <span className="pt-0.5">Repay debt + fee to withdraw collateral</span>
-              </li>
-            </ol>
-          </div>
+        {/* Main Action Card */}
+        <div className="max-w-lg mx-auto">
+          <ActionCard />
+        </div>
 
-          {/* Parameters */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-5">
-            <h3 className="text-fluid-lg font-semibold mb-4">Protocol Parameters</h3>
-            <dl className="space-y-2 text-fluid-sm">
-              <div className="flex justify-between">
-                <dt className="text-zinc-400">Min Collateral Ratio</dt>
-                <dd className="font-mono">110%</dd>
+        {/* How It Works */}
+        <div className="max-w-3xl mx-auto mt-16">
+          <h3 className="text-xl font-semibold text-center mb-8">How It Works</h3>
+          <div className="grid md:grid-cols-4 gap-6">
+            {[
+              {
+                step: 1,
+                title: 'Connect',
+                desc: 'Link your Unisat wallet to Bitcoin Testnet4',
+              },
+              {
+                step: 2,
+                title: 'Deposit',
+                desc: 'Add BTC as collateral (min 110% ratio)',
+              },
+              {
+                step: 3,
+                title: 'Mint',
+                desc: 'Borrow zkUSD stablecoins against your BTC',
+              },
+              {
+                step: 4,
+                title: 'Repay',
+                desc: 'Return zkUSD + fee to unlock collateral',
+              },
+            ].map(({ step, title, desc }) => (
+              <div key={step} className="text-center">
+                <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                  {step}
+                </div>
+                <h4 className="font-semibold text-white mb-1">{title}</h4>
+                <p className="text-sm text-zinc-400">{desc}</p>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-400">Critical CR</dt>
-                <dd className="font-mono">150%</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-400">Min Debt</dt>
-                <dd className="font-mono">10 zkUSD</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-400">Opening Fee</dt>
-                <dd className="font-mono">0.5% + base</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-400">Liquidation Bonus</dt>
-                <dd className="font-mono">0.5%</dd>
-              </div>
-            </dl>
+            ))}
           </div>
         </div>
-      </div>
-    </PageLayout>
+      </main>
+
+      <Footer />
+    </div>
   );
 }
