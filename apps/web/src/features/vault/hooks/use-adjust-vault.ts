@@ -72,14 +72,19 @@ export function useAdjustVault() {
 
         if (params.isCollateralIncrease && params.collateralChange > 0n) {
           const utxos = await client.getAddressUtxos(address);
-          const requiredAmount = Number(params.collateralChange) + 10000; // Buffer for fees
+          // Get fee estimate for dynamic buffer calculation
+          const feeEstimate = await client.getFeeEstimates();
+          const estimatedFee = Math.ceil(feeEstimate.halfHourFee * 1500); // ~1500 vbytes for adjust
+          const feeBuffer = Math.max(estimatedFee, 10000); // At least 10k sats buffer
+
+          const requiredAmount = Number(params.collateralChange) + feeBuffer;
           const fundingUtxo = utxos
-            .filter((u) => u.status.confirmed && `${u.txid}:${u.vout}` !== params.vault.utxo)
+            .filter((u) => u.status?.confirmed && `${u.txid}:${u.vout}` !== params.vault.utxo)
             .sort((a, b) => b.value - a.value)
             .find((u) => u.value >= requiredAmount);
 
           if (!fundingUtxo) {
-            throw new Error(`No UTXO available for adding collateral. Need ${requiredAmount} sats`);
+            throw new Error(`No UTXO available for adding collateral. Need ${requiredAmount} sats (including ~${feeBuffer} sats for fees)`);
           }
           additionalBtcUtxo = `${fundingUtxo.txid}:${fundingUtxo.vout}`;
           fundingUtxoValue = fundingUtxo.value;
@@ -191,17 +196,36 @@ export function useAdjustVault() {
           signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
             autoFinalized: true,
           });
-        } catch {
+        } catch (signError) {
+          const errorMessage = signError instanceof Error ? signError.message : String(signError);
+          if (errorMessage.toLowerCase().includes('user rejected') ||
+              errorMessage.toLowerCase().includes('cancelled') ||
+              errorMessage.toLowerCase().includes('denied')) {
+            throw new Error('Transaction signing was cancelled');
+          }
+          console.warn('[AdjustVault] PSBT signing failed, using original transactions:', errorMessage);
           signedCommitTx = proveResult.commitTx;
           signedSpellTx = proveResult.spellTx;
         }
 
         setStatus('broadcasting');
-        toast.loading('Broadcasting transaction...', { id: 'adjust-tx' });
+        toast.loading('Broadcasting commit transaction...', { id: 'adjust-tx' });
 
-        // Broadcast transactions
-        await client.bitcoin.broadcast(signedCommitTx);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Broadcast commit transaction first
+        const commitTxId = await client.bitcoin.broadcast(signedCommitTx);
+
+        // Wait for mempool propagation
+        toast.loading('Waiting for network propagation...', { id: 'adjust-tx' });
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        // Verify commit TX is in mempool before broadcasting spell
+        try {
+          await client.bitcoin.getTransaction(commitTxId);
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+
+        toast.loading('Broadcasting spell transaction...', { id: 'adjust-tx' });
         const spellTxId = await client.bitcoin.broadcast(signedSpellTx);
 
         // Update local vault state

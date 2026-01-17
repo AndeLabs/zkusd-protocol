@@ -56,16 +56,26 @@ export function useOpenVault() {
           throw new Error('No UTXOs available for funding');
         }
 
+        // Get fee estimate for dynamic buffer calculation
+        const fees = await client.getFeeEstimates();
+        // Estimate ~2000 vbytes for vault open transaction, multiply by fee rate
+        const estimatedFee = Math.ceil(fees.halfHourFee * 2000);
+        const feeBuffer = Math.max(estimatedFee, 50000); // At least 50k sats buffer
+
         // Find a suitable UTXO for funding (needs to cover collateral + fees)
-        const requiredAmount = Number(params.collateralSats) + 50000; // Add buffer for fees
+        const requiredAmount = Number(params.collateralSats) + feeBuffer;
         const fundingUtxo = utxos
-          .filter((u) => u.status.confirmed)
+          .filter((u) => u.status?.confirmed)
           .sort((a, b) => b.value - a.value)
           .find((u) => u.value >= requiredAmount);
 
         if (!fundingUtxo) {
+          const confirmedUtxos = utxos.filter((u) => u.status?.confirmed);
+          const largestValue = confirmedUtxos.length > 0
+            ? Math.max(...confirmedUtxos.map((u) => u.value))
+            : 0;
           throw new Error(
-            `No UTXO large enough. Need ${requiredAmount} sats, largest is ${Math.max(...utxos.map((u) => u.value))} sats`
+            `No UTXO large enough. Need ${requiredAmount} sats (including ~${feeBuffer} sats for fees), largest confirmed is ${largestValue} sats`
           );
         }
 
@@ -119,10 +129,7 @@ export function useOpenVault() {
 
         toast.loading('Generating zero-knowledge proof...', { id: 'vault-tx' });
 
-        // Get fee estimate
-        const fees = await client.getFeeEstimates();
-
-        // Execute the spell through the prover
+        // Execute the spell through the prover (fees already fetched above for buffer calculation)
         // Binaries are keyed by VK (verification key)
         const proveResult = await client.executeSpell({
           spell,
@@ -154,21 +161,39 @@ export function useOpenVault() {
           signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
             autoFinalized: true,
           });
-        } catch {
-          // If PSBT signing fails, the transactions might already be finalized
+        } catch (signError) {
+          // Check if user rejected the signing request
+          const errorMessage = signError instanceof Error ? signError.message : String(signError);
+          if (errorMessage.toLowerCase().includes('user rejected') ||
+              errorMessage.toLowerCase().includes('cancelled') ||
+              errorMessage.toLowerCase().includes('denied')) {
+            throw new Error('Transaction signing was cancelled');
+          }
+          // For other errors (e.g., already finalized), try using original transactions
+          console.warn('[OpenVault] PSBT signing failed, using original transactions:', errorMessage);
           signedCommitTx = proveResult.commitTx;
           signedSpellTx = proveResult.spellTx;
         }
 
         setStatus('broadcasting');
-        toast.loading('Broadcasting transaction...', { id: 'vault-tx' });
+        toast.loading('Broadcasting commit transaction...', { id: 'vault-tx' });
 
-        // Broadcast commit transaction
+        // Broadcast commit transaction first
         const commitTxId = await client.bitcoin.broadcast(signedCommitTx);
 
-        // Wait a moment for propagation
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Wait for mempool propagation (5 seconds for better reliability)
+        toast.loading('Waiting for network propagation...', { id: 'vault-tx' });
+        await new Promise((resolve) => setTimeout(resolve, 5000));
 
+        // Verify commit TX is in mempool before broadcasting spell
+        try {
+          await client.bitcoin.getTransaction(commitTxId);
+        } catch {
+          // If we can't find commit TX, wait a bit more and retry
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+
+        toast.loading('Broadcasting spell transaction...', { id: 'vault-tx' });
         // Broadcast spell transaction
         const spellTxId = await client.bitcoin.broadcast(signedSpellTx);
 

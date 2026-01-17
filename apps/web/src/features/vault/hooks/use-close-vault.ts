@@ -156,17 +156,36 @@ export function useCloseVault() {
           signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
             autoFinalized: true,
           });
-        } catch {
+        } catch (signError) {
+          const errorMessage = signError instanceof Error ? signError.message : String(signError);
+          if (errorMessage.toLowerCase().includes('user rejected') ||
+              errorMessage.toLowerCase().includes('cancelled') ||
+              errorMessage.toLowerCase().includes('denied')) {
+            throw new Error('Transaction signing was cancelled');
+          }
+          console.warn('[CloseVault] PSBT signing failed, using original transactions:', errorMessage);
           signedCommitTx = proveResult.commitTx;
           signedSpellTx = proveResult.spellTx;
         }
 
         setStatus('broadcasting');
-        toast.loading('Broadcasting transaction...', { id: 'close-tx' });
+        toast.loading('Broadcasting commit transaction...', { id: 'close-tx' });
 
-        // Broadcast transactions
-        await client.bitcoin.broadcast(signedCommitTx);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Broadcast commit transaction first
+        const commitTxId = await client.bitcoin.broadcast(signedCommitTx);
+
+        // Wait for mempool propagation
+        toast.loading('Waiting for network propagation...', { id: 'close-tx' });
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        // Verify commit TX is in mempool before broadcasting spell
+        try {
+          await client.bitcoin.getTransaction(commitTxId);
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+
+        toast.loading('Broadcasting spell transaction...', { id: 'close-tx' });
         const spellTxId = await client.bitcoin.broadcast(signedSpellTx);
 
         // Remove vault from local storage
