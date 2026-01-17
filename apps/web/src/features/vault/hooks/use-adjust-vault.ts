@@ -68,6 +68,8 @@ export function useAdjustVault() {
 
         // Find additional BTC UTXO if adding collateral
         let additionalBtcUtxo: string | undefined;
+        let fundingUtxoValue = Number(params.vault.collateral); // Default to vault collateral
+
         if (params.isCollateralIncrease && params.collateralChange > 0n) {
           const utxos = await client.getAddressUtxos(address);
           const requiredAmount = Number(params.collateralChange) + 10000; // Buffer for fees
@@ -80,6 +82,7 @@ export function useAdjustVault() {
             throw new Error(`No UTXO available for adding collateral. Need ${requiredAmount} sats`);
           }
           additionalBtcUtxo = `${fundingUtxo.txid}:${fundingUtxo.vout}`;
+          fundingUtxoValue = fundingUtxo.value;
         }
 
         // Note: For debt repayment, we'd need zkUSD UTXO from indexer
@@ -167,7 +170,7 @@ export function useAdjustVault() {
           },
           prevTxs,
           fundingUtxo: additionalBtcUtxo || params.vault.utxo,
-          fundingUtxoValue: 0, // Will be calculated by prover
+          fundingUtxoValue,
           changeAddress: address,
           feeRate: fees.halfHourFee,
         });
