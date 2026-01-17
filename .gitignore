@@ -56,3 +56,9 @@ coverage
 *.tgz
 .vercel
 .env*.local
+
+# Planning docs
+*_PROGRESS.md
+*_STATUS.md
+*_ANALYSIS.md
+*_DESIGN.md
