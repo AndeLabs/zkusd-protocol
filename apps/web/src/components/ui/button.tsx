@@ -2,109 +2,95 @@
 
 import { forwardRef } from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-// ============================================================================
-// Types
-// ============================================================================
-
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-type ButtonSize = 'sm' | 'md' | 'lg';
-
-interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'size'> {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
   fullWidth?: boolean;
+  children?: React.ReactNode;
 }
 
-// ============================================================================
-// Styles
-// ============================================================================
-
-const variantStyles: Record<ButtonVariant, string> = {
+const variantStyles = {
   primary:
-    'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold shadow-lg shadow-amber-500/20',
+    'bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-lg shadow-amber-500/20',
   secondary:
     'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700',
   outline:
-    'bg-transparent hover:bg-zinc-800 text-white border border-zinc-600 hover:border-zinc-500',
+    'bg-transparent hover:bg-zinc-800 text-white border border-zinc-700',
   ghost:
-    'bg-transparent hover:bg-zinc-800 text-zinc-400 hover:text-white',
+    'bg-transparent hover:bg-zinc-800/50 text-zinc-400 hover:text-white',
   danger:
     'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30',
 };
 
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-2 text-sm rounded-lg gap-1.5 min-h-touch-sm',
-  md: 'px-4 py-2.5 text-sm sm:text-base rounded-xl gap-2 min-h-touch',
-  lg: 'px-6 py-3 text-base rounded-xl gap-2 min-h-touch-lg',
+const sizeStyles = {
+  sm: 'px-3 py-1.5 text-sm rounded-lg',
+  md: 'px-4 py-2.5 text-sm rounded-lg',
+  lg: 'px-6 py-3 text-base rounded-xl',
 };
-
-// ============================================================================
-// Spinner
-// ============================================================================
-
-const Spinner = ({ className = '' }: { className?: string }) => (
-  <motion.div
-    animate={{ rotate: 360 }}
-    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-    className={`border-2 border-current border-t-transparent rounded-full ${className}`}
-  />
-);
-
-// ============================================================================
-// Button Component
-// ============================================================================
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
-      children,
+      className,
       variant = 'primary',
       size = 'md',
-      isLoading = false,
-      leftIcon,
-      rightIcon,
+      loading = false,
       fullWidth = false,
       disabled,
-      className = '',
+      children,
+      type = 'button',
       ...props
     },
     ref
   ) => {
-    const isDisabled = disabled || isLoading;
+    const isDisabled = disabled || loading;
 
     return (
       <motion.button
         ref={ref}
-        whileHover={!isDisabled ? { scale: 1.02 } : undefined}
-        whileTap={!isDisabled ? { scale: 0.98 } : undefined}
+        type={type}
+        whileHover={isDisabled ? undefined : { scale: 1.02 }}
+        whileTap={isDisabled ? undefined : { scale: 0.98 }}
+        className={cn(
+          'inline-flex items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+          variantStyles[variant],
+          sizeStyles[size],
+          fullWidth && 'w-full',
+          isDisabled && 'opacity-50 cursor-not-allowed',
+          className
+        )}
         disabled={isDisabled}
-        className={`
-          inline-flex items-center justify-center
-          transition-all duration-200
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${variantStyles[variant]}
-          ${sizeStyles[size]}
-          ${fullWidth ? 'w-full' : ''}
-          ${className}
-        `}
+        aria-disabled={isDisabled}
+        aria-busy={loading}
         {...props}
       >
-        {isLoading ? (
-          <>
-            <Spinner className={size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'} />
-            <span>Loading...</span>
-          </>
-        ) : (
-          <>
-            {leftIcon && <span className="flex-shrink-0">{leftIcon}</span>}
-            {children}
-            {rightIcon && <span className="flex-shrink-0">{rightIcon}</span>}
-          </>
+        {loading && (
+          <svg
+            className="animate-spin h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
         )}
+        {children}
       </motion.button>
     );
   }

@@ -1,65 +1,53 @@
 'use client';
 
 import { forwardRef, type InputHTMLAttributes } from 'react';
+import { cn } from '@/lib/utils';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
-  leftElement?: React.ReactNode;
   rightElement?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  (
-    {
-      label,
-      error,
-      hint,
-      leftElement,
-      rightElement,
-      className = '',
-      ...props
-    },
-    ref
-  ) => {
+  ({ className, label, error, hint, rightElement, id, ...props }, ref) => {
+    const inputId = id || label?.toLowerCase().replace(/\s/g, '-');
+
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+          <label
+            htmlFor={inputId}
+            className="block text-sm font-medium text-zinc-400 mb-2"
+          >
             {label}
           </label>
         )}
         <div className="relative">
-          {leftElement && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
-              {leftElement}
-            </div>
-          )}
           <input
             ref={ref}
-            className={`
-              w-full bg-zinc-800/80 border rounded-xl px-4 py-3
-              text-white placeholder:text-zinc-500
-              focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500
-              transition-all
-              ${leftElement ? 'pl-10' : ''}
-              ${rightElement ? 'pr-10' : ''}
-              ${error ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500' : 'border-zinc-700'}
-              ${className}
-            `}
+            id={inputId}
+            className={cn(
+              'w-full bg-zinc-800 border rounded-lg px-4 py-3 text-lg font-mono text-white placeholder:text-zinc-500',
+              'focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'transition-colors',
+              error ? 'border-red-500' : 'border-zinc-700',
+              rightElement && 'pr-16',
+              className
+            )}
             {...props}
           />
           {rightElement && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {rightElement}
             </div>
           )}
         </div>
-        {(error || hint) && (
-          <p className={`mt-1.5 text-xs ${error ? 'text-red-400' : 'text-zinc-500'}`}>
-            {error || hint}
-          </p>
+        {error && <p className="mt-1.5 text-sm text-red-400">{error}</p>}
+        {hint && !error && (
+          <p className="mt-1.5 text-sm text-zinc-500">{hint}</p>
         )}
       </div>
     );
@@ -68,31 +56,27 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = 'Input';
 
-interface InputWithMaxProps extends InputProps {
-  onMax?: () => void;
-  maxLabel?: string;
+// Max button for input
+export function MaxButton({
+  onClick,
+  disabled = false,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'text-xs font-medium transition-colors',
+        disabled
+          ? 'text-zinc-600 cursor-not-allowed'
+          : 'text-amber-400 hover:text-amber-300'
+      )}
+    >
+      MAX
+    </button>
+  );
 }
-
-export const InputWithMax = forwardRef<HTMLInputElement, InputWithMaxProps>(
-  ({ onMax, maxLabel = 'MAX', ...props }, ref) => {
-    return (
-      <Input
-        ref={ref}
-        rightElement={
-          onMax && (
-            <button
-              type="button"
-              onClick={onMax}
-              className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors"
-            >
-              {maxLabel}
-            </button>
-          )
-        }
-        {...props}
-      />
-    );
-  }
-);
-
-InputWithMax.displayName = 'InputWithMax';

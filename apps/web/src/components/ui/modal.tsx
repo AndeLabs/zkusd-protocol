@@ -1,61 +1,55 @@
 'use client';
 
-import { useEffect, useCallback, type ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
+  children: ReactNode;
   title?: string;
   description?: string;
-  children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  showClose?: boolean;
+  className?: string;
+  size?: 'sm' | 'md' | 'lg';
+  closeOnOverlayClick?: boolean;
 }
 
-const sizeStyles = {
+const sizeClasses = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
-  xl: 'max-w-xl',
 };
-
-const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-    <path d="M18 6L6 18M6 6l12 12" />
-  </svg>
-);
 
 export function Modal({
   isOpen,
   onClose,
+  children,
   title,
   description,
-  children,
+  className,
   size = 'md',
-  showClose = true,
+  closeOnOverlayClick = true,
 }: ModalProps) {
-  // Close on escape
-  const handleEscape = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose]
-  );
-
+  // Close on escape key
   useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [isOpen, handleEscape]);
+  }, [isOpen, onClose]);
 
-  if (typeof document === 'undefined') return null;
+  if (typeof window === 'undefined') return null;
 
   return createPortal(
     <AnimatePresence>
@@ -66,101 +60,64 @@ export function Modal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm"
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeOnOverlayClick ? onClose : undefined}
           />
 
-          {/* Modal */}
+          {/* Modal Content */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', duration: 0.3 }}
-            className={`
-              relative w-full ${sizeStyles[size]}
-              bg-zinc-900 border border-zinc-800 rounded-2xl
-              shadow-2xl shadow-black/50
-              overflow-hidden
-            `}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className={cn(
+              'relative w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl',
+              sizeClasses[size],
+              className
+            )}
           >
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+              aria-label="Close modal"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
             {/* Header */}
-            {(title || showClose) && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-                <div>
-                  {title && <h2 className="text-lg font-semibold">{title}</h2>}
-                  {description && (
-                    <p className="text-sm text-zinc-400 mt-0.5">{description}</p>
-                  )}
-                </div>
-                {showClose && (
-                  <button
-                    onClick={onClose}
-                    className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-                  >
-                    <CloseIcon />
-                  </button>
+            {(title || description) && (
+              <div className="px-6 pt-6 pb-4">
+                {title && (
+                  <h2 className="text-xl font-semibold text-white">{title}</h2>
+                )}
+                {description && (
+                  <p className="text-sm text-zinc-400 mt-1">{description}</p>
                 )}
               </div>
             )}
 
             {/* Content */}
-            <div className="px-6 py-4">{children}</div>
+            <div className={cn(!title && !description && 'pt-6')}>
+              {children}
+            </div>
           </motion.div>
         </div>
       )}
     </AnimatePresence>,
     document.body
-  );
-}
-
-interface ConfirmModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  variant?: 'danger' | 'warning' | 'info';
-  isLoading?: boolean;
-}
-
-export function ConfirmModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
-  variant = 'danger',
-  isLoading = false,
-}: ConfirmModalProps) {
-  const variantStyles = {
-    danger: 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20',
-    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20',
-    info: 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20',
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <p className="text-zinc-400 mb-6">{message}</p>
-      <div className="flex gap-3">
-        <button
-          onClick={onClose}
-          disabled={isLoading}
-          className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors disabled:opacity-50"
-        >
-          {cancelLabel}
-        </button>
-        <button
-          onClick={onConfirm}
-          disabled={isLoading}
-          className={`flex-1 px-4 py-2.5 border rounded-xl transition-colors disabled:opacity-50 ${variantStyles[variant]}`}
-        >
-          {isLoading ? 'Loading...' : confirmLabel}
-        </button>
-      </div>
-    </Modal>
   );
 }
