@@ -1,2 +1,4 @@
 .vercel
 .env*.local
+src.backup/
+REDESIGN_PROGRESS.md
