@@ -215,16 +215,20 @@ export class VaultService {
    * Build spell for opening a new vault.
    *
    * Creates a Charms spell that:
-   * 1. Takes BTC from funding_utxo as collateral
+   * 1. Takes BTC from collateralUtxo as collateral (in spell inputs)
    * 2. Mints a Vault NFT with the vault state
    * 3. Mints zkUSD tokens to the owner
    * 4. Returns change to the owner
+   *
+   * IMPORTANT: Charms requires TWO SEPARATE UTXOs:
+   * - collateralUtxo: Goes in spell's `ins` array (the UTXO being "enchanted")
+   * - feeUtxo: Passed to prover as `funding_utxo` (MUST be different!)
    *
    * @param params - Vault parameters including collateral, debt, and owner info
    * @returns Spell object ready for proving
    */
   async buildOpenVaultSpell(params: OpenVaultParams & {
-    fundingUtxo: string;
+    collateralUtxo: string;  // UTXO with BTC for collateral (goes in spell ins)
     ownerAddress: string;
     ownerPubkey: string;
     currentBlock?: number;
@@ -234,8 +238,8 @@ export class VaultService {
     const currentBlock = params.currentBlock ?? await this.client.getBlockHeight();
     const interestRateBps = params.interestRateBps ?? DEFAULT_INTEREST_RATE_BPS;
 
-    // Generate deterministic vault ID from funding UTXO
-    const vaultId = generateVaultId(params.fundingUtxo);
+    // Generate deterministic vault ID from collateral UTXO
+    const vaultId = generateVaultId(params.collateralUtxo);
 
     // Calculate fee and total debt
     const state = await this.getProtocolState().catch(() => null);
@@ -247,7 +251,7 @@ export class VaultService {
     const vmAppRef = config.contracts.vaultManager.appRef;
     const tokenAppRef = config.contracts.zkusdToken.appRef.replace('n/', 't/');
 
-    // Build vault state
+    // Build vault state matching Rust struct format
     const vaultState = {
       id: vaultId,
       owner: params.ownerPubkey,
@@ -263,28 +267,43 @@ export class VaultService {
       insurance_balance: 0,
     };
 
+    // Operation code for OpenVault (from generate-spell.sh: op: 16)
+    const OPEN_VAULT_OP = 16;
+
     const spell: Spell = {
       version: SPELL_VERSION,
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,
       },
+      // Private inputs with operation code (matches generate-spell.sh format)
       private_inputs: {
-        '$00': params.fundingUtxo,
+        '$00': {
+          op: OPEN_VAULT_OP,
+          collateral: safeToNumber(params.collateral, 'collateral'),
+          debt: safeToNumber(params.debt, 'debt'),
+        },
       },
-      ins: [], // Empty - all BTC comes from funding_utxo
+      // Collateral UTXO goes in ins (NOT empty!)
+      // This UTXO gets "enchanted" with the vault charm
+      ins: [
+        {
+          utxo: params.collateralUtxo,
+          charms: {},  // No existing charms (raw BTC)
+        },
+      ],
       outs: [
-        // Output 1: Vault NFT
+        // Output 1: Vault NFT with state
         {
           address: params.ownerAddress,
           charms: { '$00': vaultState },
         },
-        // Output 2: Minted zkUSD
+        // Output 2: Minted zkUSD tokens
         {
           address: params.ownerAddress,
           charms: { '$01': safeToNumber(params.debt, 'debt') },
         },
-        // Output 3: Change
+        // Output 3: Change (remaining BTC after collateral)
         {
           address: params.ownerAddress,
           charms: {},

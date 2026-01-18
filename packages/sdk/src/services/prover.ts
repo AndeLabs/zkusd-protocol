@@ -357,7 +357,7 @@ export class ProverService {
   }
 
   private parseResponse(result: unknown): ProveResponse {
-    // Response should be an array of two hex strings
+    // Response should be an array of two transactions
     if (!Array.isArray(result) || result.length !== 2) {
       throw new ProverError(
         `Invalid prover response format: expected array of 2 transactions, got ${JSON.stringify(result)}`,
@@ -365,7 +365,28 @@ export class ProverService {
       );
     }
 
-    const [commitTx, spellTx] = result;
+    const [commit, spell] = result;
+
+    // Handle two possible formats:
+    // 1. Wrapped objects: [{ bitcoin: "hex" }, { bitcoin: "hex" }]
+    // 2. Raw strings: ["hex", "hex"]
+    let commitTx: string;
+    let spellTx: string;
+
+    if (typeof commit === 'string') {
+      // Format 2: Raw strings
+      commitTx = commit;
+      spellTx = spell as string;
+    } else if (typeof commit === 'object' && commit !== null && 'bitcoin' in commit) {
+      // Format 1: Wrapped objects (as shown in deploy-spell.sh)
+      commitTx = (commit as { bitcoin: string }).bitcoin;
+      spellTx = (spell as { bitcoin: string }).bitcoin;
+    } else {
+      throw new ProverError(
+        `Invalid transaction format in prover response: ${JSON.stringify(commit)}`,
+        'INVALID_RESPONSE'
+      );
+    }
 
     if (typeof commitTx !== 'string' || typeof spellTx !== 'string') {
       throw new ProverError('Invalid transaction format in prover response', 'INVALID_RESPONSE');
