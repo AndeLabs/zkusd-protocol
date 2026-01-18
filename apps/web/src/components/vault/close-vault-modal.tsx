@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
-import { Modal, Button, ICRBadge } from '@/components/ui';
+import { Button, ICRBadge, Modal } from '@/components/ui';
 import { useCloseVault, useVaultMetrics } from '@/features/vault';
 import { formatBTC, formatZkUSD } from '@/lib/utils';
 import type { TrackedVault } from '@/stores/vaults';
+import { useCallback, useMemo } from 'react';
 
 interface CloseVaultModalProps {
   isOpen: boolean;
@@ -102,8 +102,8 @@ export function CloseVaultModal({ isOpen, onClose, vault }: CloseVaultModalProps
               <div>
                 <p className="text-red-400 font-medium">Cannot close vault with debt</p>
                 <p className="text-sm text-zinc-400 mt-1">
-                  You need to repay {formatZkUSD(totalDebt)} to close this vault.
-                  Debt repayment requires a Charms indexer to locate your zkUSD tokens.
+                  You need to repay {formatZkUSD(totalDebt)} to close this vault. Debt repayment
+                  requires a Charms indexer to locate your zkUSD tokens.
                 </p>
               </div>
             </div>
@@ -127,7 +127,8 @@ export function CloseVaultModal({ isOpen, onClose, vault }: CloseVaultModalProps
               <div>
                 <p className="text-green-400 font-medium">Ready to close</p>
                 <p className="text-sm text-zinc-400 mt-1">
-                  This vault has no debt. You will recover {formatBTC(Number(vault.collateral))} BTC.
+                  This vault has no debt. You will recover {formatBTC(Number(vault.collateral))}{' '}
+                  BTC.
                 </p>
               </div>
             </div>
@@ -144,7 +145,9 @@ export function CloseVaultModal({ isOpen, onClose, vault }: CloseVaultModalProps
                   <span className="text-amber-400 text-lg">₿</span>
                 </div>
                 <div>
-                  <p className="font-mono text-white text-lg">{formatBTC(Number(vault.collateral))}</p>
+                  <p className="font-mono text-white text-lg">
+                    {formatBTC(Number(vault.collateral))}
+                  </p>
                   <p className="text-xs text-zinc-500">Collateral</p>
                 </div>
               </div>

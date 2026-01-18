@@ -1,11 +1,11 @@
 'use client';
 
+import { Badge } from '@/components/ui';
+import { ConnectButton } from '@/components/wallet/connect-button';
+import { usePrice } from '@/hooks/use-price';
+import { formatUSD } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { formatBTC, formatUSD } from '@/lib/utils';
-import { usePrice } from '@/hooks/use-price';
-import { ConnectButton } from '@/components/wallet/connect-button';
-import { Badge } from '@/components/ui';
 
 export function Header() {
   const { data: priceData, isLoading: priceLoading } = usePrice();
@@ -35,9 +35,7 @@ export function Header() {
               {priceLoading ? (
                 <span className="text-zinc-500 animate-pulse">Loading...</span>
               ) : priceData ? (
-                <span className="font-mono text-white">
-                  {formatUSD(priceData.price)}
-                </span>
+                <span className="font-mono text-white">{formatUSD(priceData.price)}</span>
               ) : (
                 <span className="text-zinc-500">--</span>
               )}

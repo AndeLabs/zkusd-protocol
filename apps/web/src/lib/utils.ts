@@ -89,7 +89,7 @@ export function calculateICR(
   debtZkUSD: bigint,
   btcPriceUsd: number
 ): number {
-  if (debtZkUSD === 0n) return Infinity;
+  if (debtZkUSD === 0n) return Number.POSITIVE_INFINITY;
 
   // collateral value in USD (8 decimals)
   const collateralValueUsd = (Number(collateralSats) * btcPriceUsd) / 100_000_000;

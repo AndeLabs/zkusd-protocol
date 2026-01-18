@@ -101,18 +101,15 @@ export function middleware(request: NextRequest) {
     const { allowed, remaining } = checkRateLimit(rateLimitKey);
 
     if (!allowed) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Too many requests', retryAfter: 60 }),
-        {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': '60',
-            'X-RateLimit-Limit': String(RATE_LIMIT_MAX_REQUESTS),
-            'X-RateLimit-Remaining': '0',
-          },
-        }
-      );
+      return new NextResponse(JSON.stringify({ error: 'Too many requests', retryAfter: 60 }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+          'X-RateLimit-Limit': String(RATE_LIMIT_MAX_REQUESTS),
+          'X-RateLimit-Remaining': '0',
+        },
+      });
     }
 
     // Add rate limit headers to API responses

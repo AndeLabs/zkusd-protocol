@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { useWallet } from '@/stores/wallet';
-import { useVaultsStore, type TrackedVault } from '@/stores/vaults';
 import { getClient } from '@/lib/sdk';
+import { type TrackedVault, useVaultsStore } from '@/stores/vaults';
+import { useWallet } from '@/stores/wallet';
+import { useMutation } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 
 export interface CloseVaultParams {
   vault: TrackedVault;
@@ -43,9 +43,7 @@ export function useCloseVault() {
 
       // Check if vault has debt
       const totalDebt =
-        params.vault.debt +
-        params.vault.accruedInterest +
-        params.vault.redistributedDebt;
+        params.vault.debt + params.vault.accruedInterest + params.vault.redistributedDebt;
 
       if (totalDebt > 0n) {
         // Cannot close vault with debt without zkUSD to repay
@@ -158,12 +156,17 @@ export function useCloseVault() {
           });
         } catch (signError) {
           const errorMessage = signError instanceof Error ? signError.message : String(signError);
-          if (errorMessage.toLowerCase().includes('user rejected') ||
-              errorMessage.toLowerCase().includes('cancelled') ||
-              errorMessage.toLowerCase().includes('denied')) {
+          if (
+            errorMessage.toLowerCase().includes('user rejected') ||
+            errorMessage.toLowerCase().includes('cancelled') ||
+            errorMessage.toLowerCase().includes('denied')
+          ) {
             throw new Error('Transaction signing was cancelled');
           }
-          console.warn('[CloseVault] PSBT signing failed, using original transactions:', errorMessage);
+          console.warn(
+            '[CloseVault] PSBT signing failed, using original transactions:',
+            errorMessage
+          );
           signedCommitTx = proveResult.commitTx;
           signedSpellTx = proveResult.spellTx;
         }

@@ -51,9 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">
-              Something went wrong
-            </h2>
+            <h2 className="text-xl font-semibold text-white mb-2">Something went wrong</h2>
             <p className="text-zinc-400 text-sm mb-6">
               An unexpected error occurred. Please try again or refresh the page.
             </p>
@@ -66,9 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <Button variant="outline" onClick={this.handleReset}>
                 Try Again
               </Button>
-              <Button onClick={() => window.location.reload()}>
-                Refresh Page
-              </Button>
+              <Button onClick={() => window.location.reload()}>Refresh Page</Button>
             </div>
           </div>
         </div>

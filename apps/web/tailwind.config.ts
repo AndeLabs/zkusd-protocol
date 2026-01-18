@@ -1,18 +1,16 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  content: [
-    './src/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       // Enhanced breakpoints for better responsive control (2025 best practices)
       screens: {
-        'xs': '475px',   // Extra small phones
-        'sm': '640px',   // Small tablets
-        'md': '768px',   // Tablets
-        'lg': '1024px',  // Laptops
-        'xl': '1280px',  // Desktops
+        xs: '475px', // Extra small phones
+        sm: '640px', // Small tablets
+        md: '768px', // Tablets
+        lg: '1024px', // Laptops
+        xl: '1280px', // Desktops
         '2xl': '1536px', // Large desktops
       },
       fontFamily: {
@@ -33,15 +31,15 @@ const config: Config = {
       },
       // Touch-friendly spacing
       spacing: {
-        'touch': '44px', // Minimum touch target size
+        touch: '44px', // Minimum touch target size
         'touch-sm': '36px',
         'touch-lg': '48px',
       },
       // Mobile-optimized transitions
       transitionDuration: {
-        'fast': '150ms',
-        'normal': '200ms',
-        'slow': '300ms',
+        fast: '150ms',
+        normal: '200ms',
+        slow: '300ms',
       },
     },
   },

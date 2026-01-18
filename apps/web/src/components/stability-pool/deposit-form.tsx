@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { useWallet } from '@/stores/wallet';
-import {
-  useStabilityPoolState,
-  useUserDeposit,
-  useStabilityPoolDeposit,
-  useStabilityPoolWithdraw,
-} from '@/features/stability-pool';
 import { Button, Input, MaxButton, Skeleton } from '@/components/ui';
-import { formatZkUSD, formatBTC } from '@/lib/utils';
+import {
+  useStabilityPoolDeposit,
+  useStabilityPoolState,
+  useStabilityPoolWithdraw,
+  useUserDeposit,
+} from '@/features/stability-pool';
+import { formatBTC, formatZkUSD } from '@/lib/utils';
+import { useWallet } from '@/stores/wallet';
+import { motion } from 'framer-motion';
+import { useCallback, useMemo, useState } from 'react';
 
 export function StabilityPoolForm() {
   const { isConnected, connect } = useWallet();
@@ -23,7 +23,7 @@ export function StabilityPoolForm() {
   const [amountInput, setAmountInput] = useState('');
 
   const amountRaw = useMemo(() => {
-    const parsed = parseFloat(amountInput);
+    const parsed = Number.parseFloat(amountInput);
     if (isNaN(parsed) || parsed <= 0) return 0n;
     return BigInt(Math.floor(parsed * 1e8));
   }, [amountInput]);
@@ -63,9 +63,7 @@ export function StabilityPoolForm() {
         <button
           onClick={() => setMode('deposit')}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            mode === 'deposit'
-              ? 'bg-amber-500 text-black'
-              : 'text-zinc-400 hover:text-white'
+            mode === 'deposit' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'
           }`}
         >
           Deposit
@@ -73,9 +71,7 @@ export function StabilityPoolForm() {
         <button
           onClick={() => setMode('withdraw')}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            mode === 'withdraw'
-              ? 'bg-amber-500 text-black'
-              : 'text-zinc-400 hover:text-white'
+            mode === 'withdraw' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'
           }`}
         >
           Withdraw
@@ -89,9 +85,7 @@ export function StabilityPoolForm() {
           {poolLoading ? (
             <Skeleton className="h-5 w-24" />
           ) : (
-            <p className="font-mono text-white">
-              {formatZkUSD(poolState?.totalDeposits ?? 0n)}
-            </p>
+            <p className="font-mono text-white">{formatZkUSD(poolState?.totalDeposits ?? 0n)}</p>
           )}
         </div>
         <div>
@@ -116,9 +110,7 @@ export function StabilityPoolForm() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-zinc-400">Deposited</span>
-                <span className="font-mono text-white">
-                  {formatZkUSD(userDeposit.deposit)}
-                </span>
+                <span className="font-mono text-white">{formatZkUSD(userDeposit.deposit)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-400">BTC Rewards</span>
@@ -192,7 +184,8 @@ export function StabilityPoolForm() {
           className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg"
         >
           <p className="text-xs text-amber-400">
-            To deposit, you need zkUSD tokens. Open a vault first to mint zkUSD against your BTC collateral.
+            To deposit, you need zkUSD tokens. Open a vault first to mint zkUSD against your BTC
+            collateral.
           </p>
         </motion.div>
       )}

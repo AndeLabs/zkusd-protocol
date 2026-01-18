@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
+import { type ReactNode, useState } from 'react';
 
 export interface TooltipProps {
   content: ReactNode;
@@ -21,18 +21,14 @@ const positions = {
 
 const arrows = {
   top: 'top-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-zinc-800',
-  bottom: 'bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-zinc-800',
+  bottom:
+    'bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-zinc-800',
   left: 'left-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-zinc-800',
-  right: 'right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-zinc-800',
+  right:
+    'right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-zinc-800',
 };
 
-export function Tooltip({
-  content,
-  children,
-  side = 'top',
-  className,
-  delay = 200,
-}: TooltipProps) {
+export function Tooltip({ content, children, side = 'top', className, delay = 200 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
@@ -67,12 +63,7 @@ export function Tooltip({
             )}
           >
             {content}
-            <div
-              className={cn(
-                'absolute w-0 h-0 border-4',
-                arrows[side]
-              )}
-            />
+            <div className={cn('absolute w-0 h-0 border-4', arrows[side])} />
           </motion.div>
         )}
       </AnimatePresence>

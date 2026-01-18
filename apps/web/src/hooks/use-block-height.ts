@@ -8,7 +8,7 @@ async function fetchBlockHeight(): Promise<number> {
     throw new Error('Failed to fetch block height');
   }
   const text = await response.text();
-  return parseInt(text, 10);
+  return Number.parseInt(text, 10);
 }
 
 export function useBlockHeight() {

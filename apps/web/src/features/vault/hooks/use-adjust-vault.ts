@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { useWallet } from '@/stores/wallet';
-import { useVaultsStore, type TrackedVault } from '@/stores/vaults';
 import { getClient } from '@/lib/sdk';
+import { type TrackedVault, useVaultsStore } from '@/stores/vaults';
+import { useWallet } from '@/stores/wallet';
+import { useMutation } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 
 export interface AdjustVaultParams {
   vault: TrackedVault;
@@ -56,9 +56,7 @@ export function useAdjustVault() {
         const collateralDelta = params.isCollateralIncrease
           ? params.collateralChange
           : -params.collateralChange;
-        const debtDelta = params.isDebtIncrease
-          ? params.debtChange
-          : -params.debtChange;
+        const debtDelta = params.isDebtIncrease ? params.debtChange : -params.debtChange;
 
         const newCollateral = params.vault.collateral + collateralDelta;
         const newDebt = params.vault.debt + debtDelta;
@@ -84,7 +82,9 @@ export function useAdjustVault() {
             .find((u) => u.value >= requiredAmount);
 
           if (!fundingUtxo) {
-            throw new Error(`No UTXO available for adding collateral. Need ${requiredAmount} sats (including ~${feeBuffer} sats for fees)`);
+            throw new Error(
+              `No UTXO available for adding collateral. Need ${requiredAmount} sats (including ~${feeBuffer} sats for fees)`
+            );
           }
           additionalBtcUtxo = `${fundingUtxo.txid}:${fundingUtxo.vout}`;
           fundingUtxoValue = fundingUtxo.value;
@@ -93,7 +93,9 @@ export function useAdjustVault() {
         // Note: For debt repayment, we'd need zkUSD UTXO from indexer
         // For now, only support adding collateral and borrowing more
         if (!params.isDebtIncrease && params.debtChange > 0n) {
-          throw new Error('Debt repayment requires zkUSD tokens. First open a vault to mint zkUSD.');
+          throw new Error(
+            'Debt repayment requires zkUSD tokens. First open a vault to mint zkUSD.'
+          );
         }
 
         // Build the adjust spell
@@ -198,12 +200,17 @@ export function useAdjustVault() {
           });
         } catch (signError) {
           const errorMessage = signError instanceof Error ? signError.message : String(signError);
-          if (errorMessage.toLowerCase().includes('user rejected') ||
-              errorMessage.toLowerCase().includes('cancelled') ||
-              errorMessage.toLowerCase().includes('denied')) {
+          if (
+            errorMessage.toLowerCase().includes('user rejected') ||
+            errorMessage.toLowerCase().includes('cancelled') ||
+            errorMessage.toLowerCase().includes('denied')
+          ) {
             throw new Error('Transaction signing was cancelled');
           }
-          console.warn('[AdjustVault] PSBT signing failed, using original transactions:', errorMessage);
+          console.warn(
+            '[AdjustVault] PSBT signing failed, using original transactions:',
+            errorMessage
+          );
           signedCommitTx = proveResult.commitTx;
           signedSpellTx = proveResult.spellTx;
         }

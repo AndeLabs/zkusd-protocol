@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
+import { type ReactNode, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -83,12 +83,7 @@ export function Modal({
               className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
               aria-label="Close modal"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -101,19 +96,13 @@ export function Modal({
             {/* Header */}
             {(title || description) && (
               <div className="px-6 pt-6 pb-4">
-                {title && (
-                  <h2 className="text-xl font-semibold text-white">{title}</h2>
-                )}
-                {description && (
-                  <p className="text-sm text-zinc-400 mt-1">{description}</p>
-                )}
+                {title && <h2 className="text-xl font-semibold text-white">{title}</h2>}
+                {description && <p className="text-sm text-zinc-400 mt-1">{description}</p>}
               </div>
             )}
 
             {/* Content */}
-            <div className={cn(!title && !description && 'pt-6')}>
-              {children}
-            </div>
+            <div className={cn(!title && !description && 'pt-6')}>{children}</div>
           </motion.div>
         </div>
       )}

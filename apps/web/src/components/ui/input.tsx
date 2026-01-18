@@ -1,7 +1,7 @@
 'use client';
 
-import { forwardRef, type InputHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
+import { type InputHTMLAttributes, forwardRef } from 'react';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -17,10 +17,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-zinc-400 mb-2"
-          >
+          <label htmlFor={inputId} className="block text-sm font-medium text-zinc-400 mb-2">
             {label}
           </label>
         )}
@@ -40,15 +37,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightElement && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              {rightElement}
-            </div>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
           )}
         </div>
         {error && <p className="mt-1.5 text-sm text-red-400">{error}</p>}
-        {hint && !error && (
-          <p className="mt-1.5 text-sm text-zinc-500">{hint}</p>
-        )}
+        {hint && !error && <p className="mt-1.5 text-sm text-zinc-500">{hint}</p>}
       </div>
     );
   }
@@ -71,9 +64,7 @@ export function MaxButton({
       disabled={disabled}
       className={cn(
         'text-xs font-medium transition-colors',
-        disabled
-          ? 'text-zinc-600 cursor-not-allowed'
-          : 'text-amber-400 hover:text-amber-300'
+        disabled ? 'text-zinc-600 cursor-not-allowed' : 'text-amber-400 hover:text-amber-300'
       )}
     >
       MAX

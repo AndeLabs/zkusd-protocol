@@ -1,7 +1,7 @@
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { StatsBar } from '@/components/protocol';
 import { ActionCard } from '@/components/action-card';
+import { Footer } from '@/components/layout/footer';
+import { Header } from '@/components/layout/header';
+import { StatsBar } from '@/components/protocol';
 
 export default function HomePage() {
   return (
@@ -15,8 +15,8 @@ export default function HomePage() {
             Bitcoin-Native Stablecoin
           </h1>
           <p className="text-base text-zinc-400 max-w-xl mx-auto">
-            Mint zkUSD by depositing BTC as collateral. Powered by zero-knowledge
-            proofs on Bitcoin via Charms Protocol.
+            Mint zkUSD by depositing BTC as collateral. Powered by zero-knowledge proofs on Bitcoin
+            via Charms Protocol.
           </p>
         </div>
 

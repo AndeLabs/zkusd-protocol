@@ -1,9 +1,9 @@
 'use client';
 
-import { Card, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
-import { OpenVaultForm } from '@/components/vault';
-import { StabilityPoolForm } from '@/components/stability-pool';
 import { PositionsSummary } from '@/components/positions';
+import { StabilityPoolForm } from '@/components/stability-pool';
+import { Card, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+import { OpenVaultForm } from '@/components/vault';
 
 export function ActionCard() {
   return (
