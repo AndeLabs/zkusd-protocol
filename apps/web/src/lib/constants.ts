@@ -1,4 +1,6 @@
 // Protocol Constants
+// Note: These mirror values from @zkusd/config/testnet4 for synchronous access.
+// Keep in sync with packages/config/src/testnet4.ts
 export const PROTOCOL = {
   MCR: 11000, // 110% Minimum Collateral Ratio (basis points)
   CCR: 15000, // 150% Critical Collateral Ratio (basis points)

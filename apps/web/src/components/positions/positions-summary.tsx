@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useWallet } from '@/stores/wallet';
@@ -26,27 +26,27 @@ export function PositionsSummary() {
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
 
-  const handleManageVault = (vault: TrackedVault) => {
+  const handleManageVault = useCallback((vault: TrackedVault) => {
     setSelectedVault(vault);
     setIsAdjustModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseVault = (vault: TrackedVault) => {
+  const handleCloseVault = useCallback((vault: TrackedVault) => {
     setSelectedVault(vault);
     setIsCloseModalOpen(true);
-  };
+  }, []);
 
-  const handleSpAddMore = () => {
+  const handleSpAddMore = useCallback(() => {
     toast.info('Stability Pool deposits require zkUSD tokens', {
       description: 'This feature requires a Charms indexer to locate your zkUSD.',
     });
-  };
+  }, []);
 
-  const handleSpWithdraw = () => {
+  const handleSpWithdraw = useCallback(() => {
     toast.info('Withdrawal requires deposit UTXO', {
       description: 'This feature requires a Charms indexer to locate your deposit.',
     });
-  };
+  }, []);
 
   if (!isConnected) {
     return (
