@@ -52,8 +52,10 @@ export function useOpenVault() {
 
         // Get UTXOs for funding
         const utxos = await client.getAddressUtxos(address);
-        if (utxos.length === 0) {
-          throw new Error('No UTXOs available for funding');
+        const confirmedUtxos = utxos.filter((u) => u.status?.confirmed);
+
+        if (confirmedUtxos.length === 0) {
+          throw new Error('No confirmed UTXOs available');
         }
 
         // Get fee estimate for dynamic buffer calculation
@@ -62,33 +64,71 @@ export function useOpenVault() {
         const estimatedFee = Math.ceil(fees.halfHourFee * 2000);
         const feeBuffer = Math.max(estimatedFee, 50000); // At least 50k sats buffer
 
-        // Find a suitable UTXO for funding (needs to cover collateral + fees)
-        const requiredAmount = Number(params.collateralSats) + feeBuffer;
-        const fundingUtxo = utxos
-          .filter((u) => u.status?.confirmed)
-          .sort((a, b) => b.value - a.value)
-          .find((u) => u.value >= requiredAmount);
+        // CRITICAL: Charms requires TWO SEPARATE UTXOs
+        // 1. collateralUtxo: Goes in spell's `ins` array (the UTXO being "enchanted")
+        // 2. feeUtxo: Passed to prover as `funding_utxo` (MUST be different!)
+        //
+        // Using the same UTXO for both causes "conflict-in-package" error
 
-        if (!fundingUtxo) {
-          const confirmedUtxos = utxos.filter((u) => u.status?.confirmed);
-          const largestValue =
-            confirmedUtxos.length > 0 ? Math.max(...confirmedUtxos.map((u) => u.value)) : 0;
-          throw new Error(
-            `No UTXO large enough. Need ${requiredAmount} sats (including ~${feeBuffer} sats for fees), largest confirmed is ${largestValue} sats`
-          );
+        const collateralAmount = Number(params.collateralSats);
+
+        // Sort UTXOs by value descending
+        const sortedUtxos = [...confirmedUtxos].sort((a, b) => b.value - a.value);
+
+        // Strategy: Find two UTXOs that together cover collateral + fees
+        // - Collateral UTXO: Should have at least collateral amount
+        // - Fee UTXO: Should have at least fee amount
+
+        let collateralUtxo = sortedUtxos.find((u) => u.value >= collateralAmount);
+        let feeUtxo = sortedUtxos.find(
+          (u) => u.value >= feeBuffer && u !== collateralUtxo
+        );
+
+        // If we can't find separate UTXOs, check if we have one large enough for everything
+        // In this case, we need to split - but that's not possible in one tx
+        if (!collateralUtxo || !feeUtxo) {
+          // Fallback: Check if there's a single UTXO large enough for everything
+          // This is a UX compromise - ideally user should have 2 UTXOs
+          const totalRequired = collateralAmount + feeBuffer;
+          const largeUtxo = sortedUtxos.find((u) => u.value >= totalRequired);
+
+          if (largeUtxo && sortedUtxos.length >= 2) {
+            // Use the large one for collateral, find any other for fees
+            collateralUtxo = largeUtxo;
+            feeUtxo = sortedUtxos.find((u) => u !== largeUtxo);
+          } else if (largeUtxo) {
+            throw new Error(
+              `Need 2 separate UTXOs: one for collateral (${collateralAmount} sats) and one for fees (~${feeBuffer} sats). ` +
+              `You only have 1 UTXO. Please split your funds first.`
+            );
+          } else {
+            const largestValue = sortedUtxos.length > 0 ? sortedUtxos[0].value : 0;
+            throw new Error(
+              `Insufficient funds. Need ${collateralAmount} sats for collateral + ~${feeBuffer} sats for fees. ` +
+              `Largest confirmed UTXO is ${largestValue} sats.`
+            );
+          }
         }
 
-        const fundingUtxoId = `${fundingUtxo.txid}:${fundingUtxo.vout}`;
+        if (!collateralUtxo || !feeUtxo) {
+          throw new Error('Could not find suitable UTXOs for vault creation');
+        }
+
+        const collateralUtxoId = `${collateralUtxo.txid}:${collateralUtxo.vout}`;
+        const feeUtxoId = `${feeUtxo.txid}:${feeUtxo.vout}`;
+
+        console.log('[OpenVault] Collateral UTXO:', collateralUtxoId, 'value:', collateralUtxo.value);
+        console.log('[OpenVault] Fee UTXO:', feeUtxoId, 'value:', feeUtxo.value);
 
         // Get current block height
         const currentBlock = await client.getBlockHeight();
 
-        // Build the spell
+        // Build the spell with collateral UTXO in ins
         const spell = await client.vault.buildOpenVaultSpell({
           collateral: params.collateralSats,
           debt: params.debtRaw,
-          owner: publicKey, // Owner is identified by public key
-          fundingUtxo: fundingUtxoId,
+          owner: publicKey,
+          collateralUtxo: collateralUtxoId, // Goes in spell's ins array
           ownerAddress: address,
           ownerPubkey: publicKey,
           currentBlock,
@@ -97,8 +137,12 @@ export function useOpenVault() {
         setStatus('proving');
         toast.loading('Loading app binaries...', { id: 'vault-tx' });
 
-        // Get previous transaction hex for the funding UTXO
-        const prevTxHex = await client.getRawTransaction(fundingUtxo.txid);
+        // Get previous transaction hex for BOTH UTXOs
+        // The prover needs raw tx for all referenced UTXOs
+        const [collateralPrevTx, feePrevTx] = await Promise.all([
+          client.getRawTransaction(collateralUtxo.txid),
+          client.getRawTransaction(feeUtxo.txid),
+        ]);
 
         // Get deployment config for app binaries
         const config = await client.getDeploymentConfig();
@@ -128,17 +172,18 @@ export function useOpenVault() {
 
         toast.loading('Generating zero-knowledge proof...', { id: 'vault-tx' });
 
-        // Execute the spell through the prover (fees already fetched above for buffer calculation)
-        // Binaries are keyed by VK (verification key)
+        // Execute the spell through the prover
+        // - prev_txs: Include BOTH collateral and fee UTXO transactions
+        // - funding_utxo: The FEE UTXO (DIFFERENT from collateral UTXO!)
         const proveResult = await client.executeSpell({
           spell,
           binaries: {
             [config.contracts.vaultManager.vk]: vmBinary,
             [config.contracts.zkusdToken.vk]: tokenBinary,
           },
-          prevTxs: [prevTxHex],
-          fundingUtxo: fundingUtxoId,
-          fundingUtxoValue: fundingUtxo.value,
+          prevTxs: [collateralPrevTx, feePrevTx], // Both raw txs
+          fundingUtxo: feeUtxoId, // Fee UTXO (DIFFERENT from collateral!)
+          fundingUtxoValue: feeUtxo.value,
           changeAddress: address,
           feeRate: fees.halfHourFee,
         });
@@ -213,8 +258,8 @@ export function useOpenVault() {
           },
         });
 
-        // Generate vault ID from funding UTXO
-        const vaultId = generateVaultId(fundingUtxoId);
+        // Generate vault ID from collateral UTXO (matches SDK)
+        const vaultId = generateVaultId(collateralUtxoId);
 
         // Store vault locally for tracking (until indexer is available)
         addVault({
