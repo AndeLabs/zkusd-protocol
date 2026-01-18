@@ -12,6 +12,7 @@ export interface ZkUsdClientConfig {
   network: Network;
   charmsApiUrl?: string;
   bitcoinRpcUrl?: string;
+  demoMode?: boolean; // Enable demo mode for UI testing (simulates transactions)
 }
 
 const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
@@ -57,6 +58,7 @@ export class ZkUsdClient {
     this.bitcoin = new BitcoinApiService(config.network, config.bitcoinRpcUrl);
     this.prover = new ProverService(config.network, {
       apiUrl: config.charmsApiUrl,
+      demoMode: config.demoMode,
     });
 
     // Initialize domain services
