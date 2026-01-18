@@ -97,21 +97,25 @@ export class ZkUsdClient {
               appId: TESTNET4_CONFIG.contracts.priceOracle.appId,
               vk: TESTNET4_CONFIG.contracts.priceOracle.vk,
               appRef: TESTNET4_CONFIG.contracts.priceOracle.appRef,
+              wasmPath: TESTNET4_CONFIG.contracts.priceOracle.wasmPath,
             },
             zkusdToken: {
               appId: TESTNET4_CONFIG.contracts.zkusdToken.appId,
               vk: TESTNET4_CONFIG.contracts.zkusdToken.vk,
               appRef: TESTNET4_CONFIG.contracts.zkusdToken.appRef,
+              wasmPath: TESTNET4_CONFIG.contracts.zkusdToken.wasmPath,
             },
             vaultManager: {
               appId: TESTNET4_CONFIG.contracts.vaultManager.appId,
               vk: TESTNET4_CONFIG.contracts.vaultManager.vk,
               appRef: TESTNET4_CONFIG.contracts.vaultManager.appRef,
+              wasmPath: TESTNET4_CONFIG.contracts.vaultManager.wasmPath,
             },
             stabilityPool: {
               appId: TESTNET4_CONFIG.contracts.stabilityPool.appId,
               vk: TESTNET4_CONFIG.contracts.stabilityPool.vk,
               appRef: TESTNET4_CONFIG.contracts.stabilityPool.appRef,
+              wasmPath: TESTNET4_CONFIG.contracts.stabilityPool.wasmPath,
             },
           },
           addresses: {
