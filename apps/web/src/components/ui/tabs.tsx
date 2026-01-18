@@ -1,13 +1,8 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+import { type ReactNode, createContext, useContext, useState } from 'react';
 
 // Context
 interface TabsContextValue {
@@ -56,14 +51,7 @@ export interface TabsListProps {
 
 export function TabsList({ children, className }: TabsListProps) {
   return (
-    <div
-      className={cn(
-        'flex border-b border-zinc-800 bg-zinc-900/50',
-        className
-      )}
-    >
-      {children}
-    </div>
+    <div className={cn('flex border-b border-zinc-800 bg-zinc-900/50', className)}>{children}</div>
   );
 }
 
@@ -75,12 +63,7 @@ export interface TabsTriggerProps {
   disabled?: boolean;
 }
 
-export function TabsTrigger({
-  value,
-  children,
-  className,
-  disabled,
-}: TabsTriggerProps) {
+export function TabsTrigger({ value, children, className, disabled }: TabsTriggerProps) {
   const { activeTab, setActiveTab } = useTabsContext();
   const isActive = activeTab === value;
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useWallet } from '@/stores/wallet';
 import { getClient } from '@/lib/sdk';
+import { useWallet } from '@/stores/wallet';
+import { useQuery } from '@tanstack/react-query';
 
 export function useUserVaults() {
   const { address, isConnected } = useWallet();

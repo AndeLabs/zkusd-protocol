@@ -5,14 +5,7 @@ export interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return (
-    <div
-      className={cn(
-        'animate-pulse bg-zinc-800 rounded',
-        className
-      )}
-    />
-  );
+  return <div className={cn('animate-pulse bg-zinc-800 rounded', className)} />;
 }
 
 // Preset skeleton variants
@@ -61,9 +54,7 @@ export function LoadingOverlay({ message }: { message?: string }) {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        {message && (
-          <p className="text-sm text-zinc-400">{message}</p>
-        )}
+        {message && <p className="text-sm text-zinc-400">{message}</p>}
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { PROTOCOL } from '@/lib/constants';
 
 export function Footer() {
@@ -8,9 +7,7 @@ export function Footer() {
         <div className="grid md:grid-cols-3 gap-8">
           {/* Protocol Info */}
           <div>
-            <h4 className="text-sm font-semibold text-white mb-3">
-              Protocol Parameters
-            </h4>
+            <h4 className="text-sm font-semibold text-white mb-3">Protocol Parameters</h4>
             <dl className="space-y-1 text-sm">
               <div className="flex justify-between text-zinc-400">
                 <dt>Min Collateral Ratio</dt>
@@ -22,9 +19,7 @@ export function Footer() {
               </div>
               <div className="flex justify-between text-zinc-400">
                 <dt>Min Debt</dt>
-                <dd className="font-mono">
-                  {Number(PROTOCOL.MIN_DEBT) / 100_000_000} zkUSD
-                </dd>
+                <dd className="font-mono">{Number(PROTOCOL.MIN_DEBT) / 100_000_000} zkUSD</dd>
               </div>
               <div className="flex justify-between text-zinc-400">
                 <dt>Liquidation Bonus</dt>
@@ -72,17 +67,12 @@ export function Footer() {
 
           {/* About */}
           <div>
-            <h4 className="text-sm font-semibold text-white mb-3">
-              About zkUSD
-            </h4>
+            <h4 className="text-sm font-semibold text-white mb-3">About zkUSD</h4>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Bitcoin-native stablecoin protocol powered by zero-knowledge proofs.
-              Mint zkUSD by depositing BTC as collateral, no bridges or custodians
-              required.
+              Bitcoin-native stablecoin protocol powered by zero-knowledge proofs. Mint zkUSD by
+              depositing BTC as collateral, no bridges or custodians required.
             </p>
-            <p className="text-xs text-zinc-500 mt-4">
-              Built with Charms on Bitcoin
-            </p>
+            <p className="text-xs text-zinc-500 mt-4">Built with Charms on Bitcoin</p>
           </div>
         </div>
 

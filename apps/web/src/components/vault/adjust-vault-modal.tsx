@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { Modal, Button, Input, ICRBadge } from '@/components/ui';
-import { usePrice } from '@/hooks/use-price';
+import { Button, ICRBadge, Input, Modal } from '@/components/ui';
 import { useAdjustVault, useVaultMetrics } from '@/features/vault';
-import { formatBTC, formatZkUSD, formatUSD } from '@/lib/utils';
+import { usePrice } from '@/hooks/use-price';
 import { PROTOCOL } from '@/lib/constants';
+import { formatBTC, formatUSD, formatZkUSD } from '@/lib/utils';
 import type { TrackedVault } from '@/stores/vaults';
+import { useCallback, useMemo, useState } from 'react';
 
 interface AdjustVaultModalProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
 
   // Parse amount
   const amountRaw = useMemo(() => {
-    const parsed = parseFloat(amountInput);
+    const parsed = Number.parseFloat(amountInput);
     if (isNaN(parsed) || parsed <= 0) return 0n;
     return BigInt(Math.floor(parsed * 1e8));
   }, [amountInput]);
@@ -35,16 +35,12 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
   // Calculate new values
   const newCollateral = useMemo(() => {
     if (mode !== 'collateral') return vault.collateral;
-    return direction === 'add'
-      ? vault.collateral + amountRaw
-      : vault.collateral - amountRaw;
+    return direction === 'add' ? vault.collateral + amountRaw : vault.collateral - amountRaw;
   }, [mode, direction, vault.collateral, amountRaw]);
 
   const newDebt = useMemo(() => {
     if (mode !== 'debt') return vault.debt;
-    return direction === 'add'
-      ? vault.debt + amountRaw
-      : vault.debt - amountRaw;
+    return direction === 'add' ? vault.debt + amountRaw : vault.debt - amountRaw;
   }, [mode, direction, vault.debt, amountRaw]);
 
   // Get metrics for new values
@@ -142,7 +138,11 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
         {/* Mode Selector */}
         <div className="flex gap-2">
           <button
-            onClick={() => { setMode('collateral'); setDirection('add'); setAmountInput(''); }}
+            onClick={() => {
+              setMode('collateral');
+              setDirection('add');
+              setAmountInput('');
+            }}
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
               mode === 'collateral'
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
@@ -152,7 +152,11 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
             Collateral
           </button>
           <button
-            onClick={() => { setMode('debt'); setDirection('add'); setAmountInput(''); }}
+            onClick={() => {
+              setMode('debt');
+              setDirection('add');
+              setAmountInput('');
+            }}
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
               mode === 'debt'
                 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
@@ -227,7 +231,9 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
             {newMetrics.liquidationPrice > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-400">Liquidation Price</span>
-                <span className="font-mono text-white">{formatUSD(newMetrics.liquidationPrice)}</span>
+                <span className="font-mono text-white">
+                  {formatUSD(newMetrics.liquidationPrice)}
+                </span>
               </div>
             )}
           </div>
@@ -238,12 +244,7 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
           <Button variant="outline" fullWidth onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button
-            fullWidth
-            onClick={handleSubmit}
-            loading={isLoading}
-            disabled={!canSubmit}
-          >
+          <Button fullWidth onClick={handleSubmit} loading={isLoading} disabled={!canSubmit}>
             {isLoading ? getStatusText(status) : 'Confirm Adjustment'}
           </Button>
         </div>

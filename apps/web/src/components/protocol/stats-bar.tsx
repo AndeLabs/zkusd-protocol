@@ -1,10 +1,10 @@
 'use client';
 
-import { usePrice } from '@/hooks/use-price';
+import { Skeleton } from '@/components/ui';
 import { useBlockHeight } from '@/hooks/use-block-height';
 import { useFees } from '@/hooks/use-fees';
+import { usePrice } from '@/hooks/use-price';
 import { formatUSD } from '@/lib/utils';
-import { Skeleton } from '@/components/ui';
 
 export function StatsBar() {
   const { data: priceData, isLoading: priceLoading } = usePrice();

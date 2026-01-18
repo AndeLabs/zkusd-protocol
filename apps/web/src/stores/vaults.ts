@@ -70,9 +70,7 @@ export const useVaultsStore = create<VaultsStore>()(
 
       updateVault: (id, updates) =>
         set((state) => ({
-          vaults: state.vaults.map((v) =>
-            v.id === id ? { ...v, ...updates } : v
-          ),
+          vaults: state.vaults.map((v) => (v.id === id ? { ...v, ...updates } : v)),
         })),
 
       removeVault: (id) =>
@@ -82,8 +80,7 @@ export const useVaultsStore = create<VaultsStore>()(
 
       getVaultById: (id) => get().vaults.find((v) => v.id === id),
 
-      getVaultsByOwner: (owner) =>
-        get().vaults.filter((v) => v.owner === owner),
+      getVaultsByOwner: (owner) => get().vaults.filter((v) => v.owner === owner),
 
       clearVaults: () => set({ vaults: [] }),
     }),

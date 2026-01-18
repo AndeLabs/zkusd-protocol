@@ -44,7 +44,7 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
       {
         next: { revalidate: CACHE_DURATION },
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       }
     );
@@ -67,19 +67,16 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
 
   // Fallback: Coinbase
   try {
-    const response = await fetchWithTimeout(
-      'https://api.coinbase.com/v2/prices/BTC-USD/spot',
-      {
-        next: { revalidate: CACHE_DURATION },
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const response = await fetchWithTimeout('https://api.coinbase.com/v2/prices/BTC-USD/spot', {
+      next: { revalidate: CACHE_DURATION },
+      headers: {
+        Accept: 'application/json',
+      },
+    });
 
     if (response.ok) {
       const data = await response.json();
-      const priceUsd = parseFloat(data.data?.amount);
+      const priceUsd = Number.parseFloat(data.data?.amount);
 
       if (!isNaN(priceUsd) && priceUsd > 0) {
         return NextResponse.json({
@@ -95,20 +92,17 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
 
   // Second fallback: Kraken
   try {
-    const response = await fetchWithTimeout(
-      'https://api.kraken.com/0/public/Ticker?pair=XBTUSD',
-      {
-        next: { revalidate: CACHE_DURATION },
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const response = await fetchWithTimeout('https://api.kraken.com/0/public/Ticker?pair=XBTUSD', {
+      next: { revalidate: CACHE_DURATION },
+      headers: {
+        Accept: 'application/json',
+      },
+    });
 
     if (response.ok) {
       const data = await response.json();
       const priceStr = data.result?.XXBTZUSD?.c?.[0];
-      const priceUsd = parseFloat(priceStr);
+      const priceUsd = Number.parseFloat(priceStr);
 
       if (!isNaN(priceUsd) && priceUsd > 0) {
         return NextResponse.json({
@@ -129,14 +123,14 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
       {
         next: { revalidate: CACHE_DURATION },
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       }
     );
 
     if (response.ok) {
       const data = await response.json();
-      const priceUsd = parseFloat(data.price);
+      const priceUsd = Number.parseFloat(data.price);
 
       if (!isNaN(priceUsd) && priceUsd > 0) {
         return NextResponse.json({
@@ -151,8 +145,5 @@ export async function GET(): Promise<NextResponse<PriceResponse | ErrorResponse>
   }
 
   // All APIs failed
-  return NextResponse.json(
-    { error: 'Unable to fetch BTC price from any source' },
-    { status: 503 }
-  );
+  return NextResponse.json({ error: 'Unable to fetch BTC price from any source' }, { status: 503 });
 }

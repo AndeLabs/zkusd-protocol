@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
 import { usePrice } from '@/hooks/use-price';
 import { PROTOCOL } from '@/lib/constants';
 import { calculateICR } from '@/lib/utils';
+import { useMemo } from 'react';
 
 interface VaultMetrics {
   icr: number;
@@ -50,10 +50,7 @@ export function useVaultMetrics(
 
     // Calculate ICR: (collateral * price) / debt * 10000
     // collateral is in sats (1e8), price is in USD, debt is in zkUSD (1e8)
-    const icr =
-      totalDebt > 0n
-        ? calculateICR(collateralSats, totalDebt, btcPrice)
-        : 0;
+    const icr = totalDebt > 0n ? calculateICR(collateralSats, totalDebt, btcPrice) : 0;
 
     // Determine health status
     let healthStatus: 'safe' | 'warning' | 'danger' = 'safe';
@@ -76,11 +73,7 @@ export function useVaultMetrics(
     // This gives the debt in raw units (1e8 scale)
     const maxDebt =
       collateralSats > 0n
-        ? BigInt(
-            Math.floor(
-              (Number(collateralSats) * btcPrice * 10000) / PROTOCOL.MCR
-            )
-          )
+        ? BigInt(Math.floor((Number(collateralSats) * btcPrice * 10000) / PROTOCOL.MCR))
         : 0n;
 
     // Validation

@@ -1,8 +1,9 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Toaster } from 'sonner';
+
 import { ErrorBoundary } from '@/components/ui';
 
 interface ProvidersProps {
@@ -25,9 +26,7 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        {children}
-      </ErrorBoundary>
+      <ErrorBoundary>{children}</ErrorBoundary>
       <Toaster
         position="bottom-right"
         theme="dark"

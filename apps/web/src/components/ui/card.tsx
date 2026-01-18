@@ -36,12 +36,8 @@ export function Card({
     >
       {(title || description) && (
         <div className={cn('mb-4', padding === 'none' && 'px-5 pt-5')}>
-          {title && (
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
-          )}
-          {description && (
-            <p className="text-sm text-zinc-400 mt-1">{description}</p>
-          )}
+          {title && <h3 className="text-lg font-semibold text-white">{title}</h3>}
+          {description && <p className="text-sm text-zinc-400 mt-1">{description}</p>}
         </div>
       )}
       {children}
@@ -61,30 +57,14 @@ export interface StatCardProps {
   className?: string;
 }
 
-export function StatCard({
-  label,
-  value,
-  subValue,
-  change,
-  className,
-}: StatCardProps) {
+export function StatCard({ label, value, subValue, change, className }: StatCardProps) {
   return (
-    <div
-      className={cn(
-        'bg-zinc-900 border border-zinc-800 rounded-xl p-4',
-        className
-      )}
-    >
+    <div className={cn('bg-zinc-900 border border-zinc-800 rounded-xl p-4', className)}>
       <p className="text-sm text-zinc-400 mb-1">{label}</p>
       <p className="text-2xl font-bold text-white font-mono">{value}</p>
       {subValue && <p className="text-sm text-zinc-500 mt-1">{subValue}</p>}
       {change && (
-        <p
-          className={cn(
-            'text-sm mt-1',
-            change.positive ? 'text-green-400' : 'text-red-400'
-          )}
-        >
+        <p className={cn('text-sm mt-1', change.positive ? 'text-green-400' : 'text-red-400')}>
           {change.positive ? '+' : ''}
           {change.value}
         </p>

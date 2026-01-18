@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { useWallet } from '@/stores/wallet';
-import { useVaultsStore } from '@/stores/vaults';
 import { getClient } from '@/lib/sdk';
+import { useVaultsStore } from '@/stores/vaults';
+import { useWallet } from '@/stores/wallet';
+import { useMutation } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 
 export interface OpenVaultParams {
   collateralSats: bigint;
@@ -71,9 +71,8 @@ export function useOpenVault() {
 
         if (!fundingUtxo) {
           const confirmedUtxos = utxos.filter((u) => u.status?.confirmed);
-          const largestValue = confirmedUtxos.length > 0
-            ? Math.max(...confirmedUtxos.map((u) => u.value))
-            : 0;
+          const largestValue =
+            confirmedUtxos.length > 0 ? Math.max(...confirmedUtxos.map((u) => u.value)) : 0;
           throw new Error(
             `No UTXO large enough. Need ${requiredAmount} sats (including ~${feeBuffer} sats for fees), largest confirmed is ${largestValue} sats`
           );
@@ -164,13 +163,18 @@ export function useOpenVault() {
         } catch (signError) {
           // Check if user rejected the signing request
           const errorMessage = signError instanceof Error ? signError.message : String(signError);
-          if (errorMessage.toLowerCase().includes('user rejected') ||
-              errorMessage.toLowerCase().includes('cancelled') ||
-              errorMessage.toLowerCase().includes('denied')) {
+          if (
+            errorMessage.toLowerCase().includes('user rejected') ||
+            errorMessage.toLowerCase().includes('cancelled') ||
+            errorMessage.toLowerCase().includes('denied')
+          ) {
             throw new Error('Transaction signing was cancelled');
           }
           // For other errors (e.g., already finalized), try using original transactions
-          console.warn('[OpenVault] PSBT signing failed, using original transactions:', errorMessage);
+          console.warn(
+            '[OpenVault] PSBT signing failed, using original transactions:',
+            errorMessage
+          );
           signedCommitTx = proveResult.commitTx;
           signedSpellTx = proveResult.spellTx;
         }
@@ -275,7 +279,7 @@ function generateVaultId(fundingUtxo: string): string {
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
   const hexPart = Math.abs(hash).toString(16).padStart(16, '0');

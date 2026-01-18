@@ -1,5 +1,5 @@
 import { ZkUsdClient } from '@zkusd/sdk';
-import { type NetworkId, NETWORKS } from './constants';
+import { NETWORKS, type NetworkId } from './constants';
 
 // Singleton client instance per network
 const clients = new Map<NetworkId, ZkUsdClient>();

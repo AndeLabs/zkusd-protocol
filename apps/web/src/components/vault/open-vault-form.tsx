@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { useWallet } from '@/stores/wallet';
+import { Button, ICRBadge, Input, MaxButton } from '@/components/ui';
+import { useOpenVault, useVaultMetrics } from '@/features/vault';
 import { usePrice } from '@/hooks/use-price';
-import { useVaultMetrics, useOpenVault } from '@/features/vault';
-import { Button, Input, MaxButton, Card, ICRBadge } from '@/components/ui';
-import { formatBTC, formatZkUSD, formatUSD } from '@/lib/utils';
 import { PROTOCOL } from '@/lib/constants';
+import { formatBTC, formatUSD, formatZkUSD } from '@/lib/utils';
+import { useWallet } from '@/stores/wallet';
+import { motion } from 'framer-motion';
+import { useCallback, useMemo, useState } from 'react';
 
 export function OpenVaultForm() {
   const { isConnected, balance, connect } = useWallet();
@@ -20,13 +20,13 @@ export function OpenVaultForm() {
 
   // Parse inputs to bigint (in satoshis for collateral, in raw units for debt)
   const collateralSats = useMemo(() => {
-    const parsed = parseFloat(collateralInput);
+    const parsed = Number.parseFloat(collateralInput);
     if (isNaN(parsed) || parsed <= 0) return 0n;
     return BigInt(Math.floor(parsed * 1e8));
   }, [collateralInput]);
 
   const debtRaw = useMemo(() => {
-    const parsed = parseFloat(debtInput);
+    const parsed = Number.parseFloat(debtInput);
     if (isNaN(parsed) || parsed <= 0) return 0n;
     return BigInt(Math.floor(parsed * 1e8));
   }, [debtInput]);
@@ -84,9 +84,7 @@ export function OpenVaultForm() {
   }, [metrics.isValid, isConnected, connect, openVault, collateralSats, debtRaw]);
 
   // Calculate USD values for display
-  const collateralUSD = priceData
-    ? (Number(collateralSats) / 1e8) * priceData.price
-    : 0;
+  const collateralUSD = priceData ? (Number(collateralSats) / 1e8) * priceData.price : 0;
 
   return (
     <div className="space-y-6">
@@ -95,9 +93,7 @@ export function OpenVaultForm() {
         <div className="flex justify-between items-center mb-2">
           <label className="text-sm text-zinc-400">Collateral (BTC)</label>
           {isConnected && (
-            <span className="text-xs text-zinc-500">
-              Balance: {formatBTC(balance)}
-            </span>
+            <span className="text-xs text-zinc-500">Balance: {formatBTC(balance)}</span>
           )}
         </div>
         <Input
@@ -107,14 +103,10 @@ export function OpenVaultForm() {
           step="any"
           value={collateralInput}
           onChange={(e) => setCollateralInput(e.target.value)}
-          rightElement={
-            <MaxButton onClick={handleMaxCollateral} disabled={!isConnected} />
-          }
+          rightElement={<MaxButton onClick={handleMaxCollateral} disabled={!isConnected} />}
         />
         {collateralUSD > 0 && (
-          <p className="text-xs text-zinc-500 mt-1">
-            ≈ {formatUSD(collateralUSD)}
-          </p>
+          <p className="text-xs text-zinc-500 mt-1">≈ {formatUSD(collateralUSD)}</p>
         )}
       </div>
 
@@ -124,7 +116,8 @@ export function OpenVaultForm() {
           <label className="text-sm text-zinc-400">Borrow (zkUSD)</label>
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500">
-              Min: {minDebtValue} | Max: {metrics.maxDebt > 0n ? (Number(metrics.maxDebt) / 1e8).toFixed(2) : '--'}
+              Min: {minDebtValue} | Max:{' '}
+              {metrics.maxDebt > 0n ? (Number(metrics.maxDebt) / 1e8).toFixed(2) : '--'}
             </span>
           </div>
         </div>
@@ -176,9 +169,7 @@ export function OpenVaultForm() {
           <div className="flex justify-between items-center">
             <span className="text-sm text-zinc-400">Liquidation Price</span>
             <span className="font-mono text-sm text-white">
-              {metrics.liquidationPrice > 0
-                ? formatUSD(metrics.liquidationPrice)
-                : '--'}
+              {metrics.liquidationPrice > 0 ? formatUSD(metrics.liquidationPrice) : '--'}
             </span>
           </div>
 

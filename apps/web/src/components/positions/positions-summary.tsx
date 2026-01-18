@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { toast } from 'sonner';
-import { useWallet } from '@/stores/wallet';
-import { useVaultsStore, type TrackedVault } from '@/stores/vaults';
+import { Button, ICRBadge, Skeleton } from '@/components/ui';
+import { AdjustVaultModal, CloseVaultModal } from '@/components/vault';
 import { useUserDeposit } from '@/features/stability-pool';
 import { usePrice } from '@/hooks/use-price';
-import { Button, Skeleton, ICRBadge } from '@/components/ui';
-import { AdjustVaultModal, CloseVaultModal } from '@/components/vault';
-import { formatBTC, formatZkUSD, calculateICR } from '@/lib/utils';
+import { calculateICR, formatBTC, formatZkUSD } from '@/lib/utils';
+import { type TrackedVault, useVaultsStore } from '@/stores/vaults';
+import { useWallet } from '@/stores/wallet';
+import { motion } from 'framer-motion';
+import { useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 export function PositionsSummary() {
   const { isConnected, connect, address, publicKey } = useWallet();
@@ -141,9 +141,7 @@ export function PositionsSummary() {
                         </div>
                         <div>
                           <span className="text-zinc-500">Debt</span>
-                          <p className="font-mono text-white">
-                            {formatZkUSD(vault.debt)}
-                          </p>
+                          <p className="font-mono text-white">{formatZkUSD(vault.debt)}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex gap-2">
@@ -202,12 +200,7 @@ export function PositionsSummary() {
                     >
                       Add More
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="flex-1"
-                      onClick={handleSpWithdraw}
-                    >
+                    <Button size="sm" variant="ghost" className="flex-1" onClick={handleSpWithdraw}>
                       Withdraw
                     </Button>
                   </div>
@@ -221,7 +214,8 @@ export function PositionsSummary() {
         {hasVaults && (
           <div className="text-xs text-zinc-500 text-center">
             <p>
-              Vaults are tracked locally in this browser. Full position tracking requires a Charms indexer.
+              Vaults are tracked locally in this browser. Full position tracking requires a Charms
+              indexer.
             </p>
           </div>
         )}

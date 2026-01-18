@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import { useWallet } from '@/stores/wallet';
 import { Button } from '@/components/ui';
 import { formatBTC } from '@/lib/utils';
+import { useWallet } from '@/stores/wallet';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 export function ConnectButton() {
   const {

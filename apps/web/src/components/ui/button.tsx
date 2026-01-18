@@ -1,8 +1,8 @@
 'use client';
 
-import { forwardRef } from 'react';
-import { motion, type HTMLMotionProps } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { type HTMLMotionProps, motion } from 'framer-motion';
+import { forwardRef } from 'react';
 
 export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
@@ -13,16 +13,11 @@ export interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'>
 }
 
 const variantStyles = {
-  primary:
-    'bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-lg shadow-amber-500/20',
-  secondary:
-    'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700',
-  outline:
-    'bg-transparent hover:bg-zinc-800 text-white border border-zinc-700',
-  ghost:
-    'bg-transparent hover:bg-zinc-800/50 text-zinc-400 hover:text-white',
-  danger:
-    'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30',
+  primary: 'bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-lg shadow-amber-500/20',
+  secondary: 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700',
+  outline: 'bg-transparent hover:bg-zinc-800 text-white border border-zinc-700',
+  ghost: 'bg-transparent hover:bg-zinc-800/50 text-zinc-400 hover:text-white',
+  danger: 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30',
 };
 
 const sizeStyles = {
