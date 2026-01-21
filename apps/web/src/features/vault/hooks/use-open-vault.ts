@@ -28,6 +28,36 @@ type VaultStatus =
   | 'success'
   | 'error';
 
+/**
+ * Check if user needs to split their UTXOs before opening a vault
+ */
+export async function checkNeedsSplit(
+  address: string,
+  collateralAmount: number,
+  feeBuffer: number
+): Promise<{ needsSplit: boolean; utxoCount: number; largestUtxo: number }> {
+  const client = getClient();
+  const utxos = await client.getAddressUtxos(address);
+  const confirmedUtxos = utxos.filter((u) => u.status?.confirmed);
+
+  if (confirmedUtxos.length === 0) {
+    return { needsSplit: false, utxoCount: 0, largestUtxo: 0 };
+  }
+
+  const sortedUtxos = [...confirmedUtxos].sort((a, b) => b.value - a.value);
+  const largestUtxo = sortedUtxos[0].value;
+
+  // Check if we can find two separate UTXOs
+  const collateralUtxo = sortedUtxos.find((u) => u.value >= collateralAmount);
+  const feeUtxo = sortedUtxos.find((u) => u.value >= feeBuffer && u !== collateralUtxo);
+
+  return {
+    needsSplit: !collateralUtxo || !feeUtxo,
+    utxoCount: confirmedUtxos.length,
+    largestUtxo,
+  };
+}
+
 export function useOpenVault() {
   const { address, publicKey, isConnected } = useWallet();
   const addVault = useVaultsStore((s) => s.addVault);
@@ -80,9 +110,7 @@ export function useOpenVault() {
         // - Fee UTXO: Should have at least fee amount
 
         let collateralUtxo = sortedUtxos.find((u) => u.value >= collateralAmount);
-        let feeUtxo = sortedUtxos.find(
-          (u) => u.value >= feeBuffer && u !== collateralUtxo
-        );
+        let feeUtxo = sortedUtxos.find((u) => u.value >= feeBuffer && u !== collateralUtxo);
 
         // If we can't find separate UTXOs, check if we have one large enough for everything
         // In this case, we need to split - but that's not possible in one tx
@@ -97,15 +125,14 @@ export function useOpenVault() {
             collateralUtxo = largeUtxo;
             feeUtxo = sortedUtxos.find((u) => u !== largeUtxo);
           } else if (largeUtxo) {
-            throw new Error(
-              `Need 2 separate UTXOs: one for collateral (${collateralAmount} sats) and one for fees (~${feeBuffer} sats). ` +
-              `You only have 1 UTXO. Please split your funds first.`
-            );
+            // Signal that we need a UTXO split (handled by WalletPreparation component)
+            throw new Error(`UTXO_SPLIT_REQUIRED:${collateralAmount}:${feeBuffer}`);
           } else {
             const largestValue = sortedUtxos.length > 0 ? sortedUtxos[0].value : 0;
+            const neededBTC = ((collateralAmount + feeBuffer) / 1e8).toFixed(6);
+            const haveBTC = (largestValue / 1e8).toFixed(6);
             throw new Error(
-              `Insufficient funds. Need ${collateralAmount} sats for collateral + ~${feeBuffer} sats for fees. ` +
-              `Largest confirmed UTXO is ${largestValue} sats.`
+              `Insufficient funds. You need at least ${neededBTC} BTC but only have ${haveBTC} BTC available.`
             );
           }
         }
@@ -117,7 +144,12 @@ export function useOpenVault() {
         const collateralUtxoId = `${collateralUtxo.txid}:${collateralUtxo.vout}`;
         const feeUtxoId = `${feeUtxo.txid}:${feeUtxo.vout}`;
 
-        console.log('[OpenVault] Collateral UTXO:', collateralUtxoId, 'value:', collateralUtxo.value);
+        console.log(
+          '[OpenVault] Collateral UTXO:',
+          collateralUtxoId,
+          'value:',
+          collateralUtxo.value
+        );
         console.log('[OpenVault] Fee UTXO:', feeUtxoId, 'value:', feeUtxo.value);
 
         // Get current block height
@@ -286,10 +318,14 @@ export function useOpenVault() {
         setStatus('error');
         const message = err instanceof Error ? err.message : 'Failed to open vault';
         setError(message);
-        toast.error('Failed to open vault', {
-          id: 'vault-tx',
-          description: message,
-        });
+
+        // Don't show toast for UTXO_SPLIT_REQUIRED - it's handled by WalletPreparation UI
+        if (!message.startsWith('UTXO_SPLIT_REQUIRED:')) {
+          toast.error('Failed to open vault', {
+            id: 'vault-tx',
+            description: message,
+          });
+        }
         throw err;
       }
     },
