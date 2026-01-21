@@ -3,12 +3,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type VaultStatus = 'active' | 'closed' | 'liquidated';
+
 export interface TrackedVault {
   id: string;
   utxo: string; // txid:vout where vault NFT lives
   owner: string;
   collateral: bigint;
   debt: bigint;
+  status: VaultStatus;
   createdAt: number;
   lastUpdated: number;
   interestRateBps: number;
@@ -16,6 +19,10 @@ export interface TrackedVault {
   redistributedDebt: bigint;
   redistributedCollateral: bigint;
   insuranceBalance: bigint;
+  // Tracking fields
+  pendingTxId?: string;
+  lastVerifiedBlock?: number;
+  localUpdatedAt?: number;
 }
 
 // Serialization helpers for bigint
@@ -38,6 +45,7 @@ function deserializeVault(data: Record<string, unknown>): TrackedVault {
     owner: data.owner as string,
     collateral: BigInt(data.collateral as string),
     debt: BigInt(data.debt as string),
+    status: (data.status as VaultStatus) || 'active',
     createdAt: data.createdAt as number,
     lastUpdated: data.lastUpdated as number,
     interestRateBps: data.interestRateBps as number,
@@ -45,6 +53,10 @@ function deserializeVault(data: Record<string, unknown>): TrackedVault {
     redistributedDebt: BigInt(data.redistributedDebt as string),
     redistributedCollateral: BigInt(data.redistributedCollateral as string),
     insuranceBalance: BigInt(data.insuranceBalance as string),
+    // Optional fields
+    pendingTxId: data.pendingTxId as string | undefined,
+    lastVerifiedBlock: data.lastVerifiedBlock as number | undefined,
+    localUpdatedAt: data.localUpdatedAt as number | undefined,
   };
 }
 
@@ -55,6 +67,10 @@ interface VaultsStore {
   removeVault: (id: string) => void;
   getVaultById: (id: string) => TrackedVault | undefined;
   getVaultsByOwner: (owner: string) => TrackedVault[];
+  getActiveVaults: () => TrackedVault[];
+  markPending: (id: string, txId: string) => void;
+  clearPending: (id: string) => void;
+  updateVaultUtxo: (id: string, newUtxo: string, updates?: Partial<TrackedVault>) => void;
   clearVaults: () => void;
 }
 
@@ -81,6 +97,41 @@ export const useVaultsStore = create<VaultsStore>()(
       getVaultById: (id) => get().vaults.find((v) => v.id === id),
 
       getVaultsByOwner: (owner) => get().vaults.filter((v) => v.owner === owner),
+
+      getActiveVaults: () => get().vaults.filter((v) => v.status === 'active'),
+
+      markPending: (id, txId) =>
+        set((state) => ({
+          vaults: state.vaults.map((v) =>
+            v.id === id
+              ? { ...v, pendingTxId: txId, localUpdatedAt: Date.now() }
+              : v
+          ),
+        })),
+
+      clearPending: (id) =>
+        set((state) => ({
+          vaults: state.vaults.map((v) =>
+            v.id === id
+              ? { ...v, pendingTxId: undefined, localUpdatedAt: Date.now() }
+              : v
+          ),
+        })),
+
+      updateVaultUtxo: (id, newUtxo, updates) =>
+        set((state) => ({
+          vaults: state.vaults.map((v) =>
+            v.id === id
+              ? {
+                  ...v,
+                  ...updates,
+                  utxo: newUtxo,
+                  pendingTxId: undefined,
+                  localUpdatedAt: Date.now(),
+                }
+              : v
+          ),
+        })),
 
       clearVaults: () => set({ vaults: [] }),
     }),

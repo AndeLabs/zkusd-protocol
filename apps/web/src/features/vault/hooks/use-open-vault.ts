@@ -343,6 +343,7 @@ export function useOpenVault() {
           owner: publicKey,
           collateral: params.collateralSats,
           debt: params.debtRaw,
+          status: 'active',
           createdAt: currentBlock,
           lastUpdated: currentBlock,
           interestRateBps: 100, // 1% default
@@ -350,6 +351,7 @@ export function useOpenVault() {
           redistributedDebt: 0n,
           redistributedCollateral: 0n,
           insuranceBalance: 0n,
+          localUpdatedAt: Date.now(),
         });
 
         return {

@@ -27,7 +27,7 @@ type CloseStatus =
 
 export function useCloseVault() {
   const { address, isConnected } = useWallet();
-  const removeVault = useVaultsStore((s) => s.removeVault);
+  const { removeVault, updateVault } = useVaultsStore();
   const [status, setStatus] = useState<CloseStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -211,8 +211,15 @@ export function useCloseVault() {
           spellTxId = await client.bitcoin.broadcast(signedSpellTx);
         }
 
-        // Remove vault from local storage
-        removeVault(params.vault.id);
+        // Mark vault as closed and update UTXO
+        // We keep the vault record for history but could also use removeVault()
+        updateVault(params.vault.id, {
+          status: 'closed',
+          utxo: `${spellTxId}:0`,
+          collateral: 0n,
+          debt: 0n,
+          localUpdatedAt: Date.now(),
+        });
 
         setStatus('success');
 
@@ -249,7 +256,7 @@ export function useCloseVault() {
         throw err;
       }
     },
-    [isConnected, address, removeVault]
+    [isConnected, address, updateVault]
   );
 
   const mutation = useMutation({
