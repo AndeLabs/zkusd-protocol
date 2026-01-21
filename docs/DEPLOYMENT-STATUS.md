@@ -2,123 +2,64 @@
 
 Last Updated: 2026-01-21
 
-## Current Status
+## Current Status: DEPLOYED
 
-### Contracts Ready for Deployment
+All zkUSD contracts are **live on Bitcoin Testnet4** with V3 deployment.
 
-All WASM contracts have been recompiled with improvements and their spells validated in mock mode:
+### Deployed Contracts
 
-| Contract | Current VK | Deployed VK | Status |
-|----------|-----------|-------------|--------|
-| Price Oracle | `98b2eeeb...c73d` | `98b2eeeb...c73d` | MATCHES |
-| zkUSD Token | `ff936fc6...c128` | `e056dfec...75fe` | NEEDS REDEPLOY |
-| Vault Manager | `833e8d5e...085f` | `d535fdc3...63bf` | NEEDS REDEPLOY |
-| Stability Pool | `98ef9f08...08e9` | `ace28945...1752` | NEEDS REDEPLOY |
+| Contract | App ID | VK | Status |
+|----------|--------|-----|--------|
+| Price Oracle | `26186d7c...e8b5` | `98b2eeeb...c73d` | Confirmed |
+| zkUSD Token | `7ff62ba4...cef1` | `ff936fc6...c128` | Confirmed |
+| Stability Pool | `00153749...dc6b` | `98ef9f08...08e9` | Confirmed |
+| Vault Manager | `ca8ab2dc...1fa9` | `833e8d5e...085f` | Confirmed |
 
-### Prover Status
+### Transaction IDs
 
-The Charms v8 prover at `https://v8.charms.dev/spells/prove` is currently returning "unexecutable" errors for all proof requests. This affects both new contracts AND existing ones with matching VKs.
+| Contract | Spell TX | Explorer |
+|----------|----------|----------|
+| Price Oracle | `03e362aa...6cf4` | [View](https://mempool.space/testnet4/tx/03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4) |
+| zkUSD Token | `6cef9848...d988` | [View](https://mempool.space/testnet4/tx/6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988) |
+| Stability Pool | `20d41c6e...560c` | [View](https://mempool.space/testnet4/tx/20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c) |
+| Vault Manager | `aac009d1...3f02` | [View](https://mempool.space/testnet4/tx/aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02) |
 
-**Mock mode validation passes** for all contracts, confirming our spell structures and WASM validation logic are correct.
+## Build Requirements
 
-## What Has Been Completed
+**CRITICAL**: Always use `charms app build` to compile contracts!
 
-1. **Code Improvements**
-   - Feature flags for mainnet/testnet in Rust constants
-   - Changed `assert!()` to `Result` returns for better error handling
-   - Multi-network configuration system (`packages/config`)
-   - Multi-prover fallback in SDK
-   - SDK error handling system (`packages/sdk/src/errors.ts`)
+```bash
+# Correct way (uses wasm32-wasip1 automatically)
+cd contracts/stability-pool
+charms app build
 
-2. **WASM Compilation**
-   - All contracts recompiled with `cargo build --target wasm32-wasip1 --release --features charms`
-   - WASM files copied to `apps/web/public/wasm/`
-   - VKs verified with `charms app vk`
-
-3. **Deployment Scripts**
-   - `scripts/deploy-contracts.ts` - Full deployment script with correct spell structures
-   - `scripts/lib/bitcoin-signer.ts` - Bitcoin transaction signing utility
-   - Spells validated in mock mode
-
-4. **Demo Mode**
-   - Enabled in `.env.local` for UI testing
-   - `NEXT_PUBLIC_DEMO_MODE=true`
-
-## Deployment Process (When Prover Available)
-
-1. Run deployment script:
-   ```bash
-   npx tsx scripts/deploy-contracts.ts
-   ```
-
-2. Or use CLI directly:
-   ```bash
-   cat spell.json | charms spell prove \
-     --prev-txs="..." \
-     --app-bins="path/to/app.wasm" \
-     --funding-utxo="txid:vout" \
-     --funding-utxo-value=100000 \
-     --change-address="tb1q..." \
-     --fee-rate=5.0
-   ```
-
-3. Sign and broadcast the returned transactions
-
-4. Update `packages/config/src/testnet4.ts` with new App IDs
-
-5. Disable demo mode: `NEXT_PUBLIC_DEMO_MODE=false`
-
-## Verified Spell Structures
-
-All spells pass validation in mock mode:
-
-### Token
-```json
-{
-  "private_inputs": {
-    "$TOKEN": {
-      "op": 0,
-      "authorized_minter": [/* 32-byte VM App ID */]
-    }
-  }
-}
+# NEVER use wasm32-unknown-unknown - causes UnreachableCodeReached error!
 ```
 
-### Stability Pool
-```json
-{
-  "private_inputs": {
-    "$SP": {
-      "op": 0,
-      "zkusd_token_id": [/* 32 bytes */],
-      "vault_manager_id": [/* 32 bytes */],
-      "admin": [/* 32 bytes */]
-    }
-  }
-}
+See `contracts/BUILDING.md` for detailed instructions.
+
+## Configuration Files
+
+| Purpose | Path |
+|---------|------|
+| Full Deployment Config | `deployments/testnet4/deployment-config.json` |
+| SDK Config | `packages/config/src/testnet4.ts` |
+| Credentials & Keys | `deployments/testnet4/CREDENTIALS.md` |
+| WASM Binaries | `apps/web/public/wasm/` |
+
+## API Endpoints
+
+| Service | URL |
+|---------|-----|
+| Charms Prover | `https://v8.charms.dev/spells/prove` |
+| Mempool Explorer | `https://mempool.space/testnet4` |
+| Mempool API | `https://mempool.space/testnet4/api` |
+
+## Web App Configuration
+
+Demo mode is **disabled** - real transactions enabled:
+
+```env
+# apps/web/.env.local
+NEXT_PUBLIC_DEMO_MODE=false
 ```
-
-### Vault Manager
-```json
-{
-  "private_inputs": {
-    "$VM": {
-      "op": 0,
-      "admin": [/* 32 bytes */],
-      "zkusd_token_id": [/* 32 bytes */],
-      "stability_pool_id": [/* 32 bytes */],
-      "price_oracle_id": [/* 32 bytes */],
-      "active_pool": [/* 32 bytes */],
-      "default_pool": [/* 32 bytes */]
-    }
-  }
-}
-```
-
-## Next Steps
-
-1. Monitor Charms prover status
-2. When prover is available, run deployment
-3. Update configuration with new App IDs
-4. Disable demo mode
-5. Full end-to-end testing
