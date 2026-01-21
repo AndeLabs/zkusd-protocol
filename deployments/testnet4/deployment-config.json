@@ -2,71 +2,70 @@
   "network": "testnet4",
   "charms_version": 8,
   "charms_sdk_version": "0.10.0",
-  "deployment_date": "2024-12-15",
-  "last_updated": "2024-12-28",
+  "deployment_date": "2026-01-21",
+  "last_updated": "2026-01-21",
   "status": "deployed",
-  "phase": "hackathon_mvp",
-  "note": "V2 REDEPLOYMENT - Token and VM with correct cross-references (App IDs, not VKs)",
+  "phase": "hackathon_mvp_v3",
+  "note": "V3 REDEPLOYMENT - All contracts rebuilt with wasm32-wasip1 target (correct for Charms)",
 
   "contracts": {
     "price_oracle": {
       "vk": "98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d",
       "app_id": "26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5",
       "spell_tx": "03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4",
-      "wasm": "target/wasm32-wasip1/release/zkusd-price-oracle-app.wasm",
-      "initial_price": 10400000000000,
-      "note": "Redeployed 2024-12-28 with fixed PriceSource serialization"
+      "wasm": "apps/web/public/wasm/zkusd-price-oracle-app.wasm",
+      "note": "VK unchanged - already compiled with correct target"
     },
     "zkusd_token": {
-      "vk": "e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe",
-      "app_id": "eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540",
-      "spell_tx": "458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423",
-      "wasm": "/tmp/zkusd-token-standalone/target/wasm32-wasip1/release/zkusd-token-app.wasm",
-      "note": "V2 Redeployed 2024-12-28 - authorized_minter = VM App ID (correct cross-reference)"
-    },
-    "vault_manager": {
-      "vk": "d535fdc354e87af6e750bfe957a4a90e467eba1457f37f05c858beaf09e763bf",
-      "app_id": "c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490",
-      "spell_tx": "b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3",
-      "wasm": "/tmp/zkusd-vm-standalone/target/wasm32-wasip1/release/zkusd-vault-manager-app.wasm",
-      "note": "V2 Redeployed 2024-12-28 - zkusd_token_id = Token App ID (correct cross-reference)"
+      "vk": "ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
+      "app_id": "7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1",
+      "spell_tx": "6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988",
+      "wasm": "apps/web/public/wasm/zkusd-token-app.wasm",
+      "note": "V3 - Recompiled with wasm32-wasip1 target"
     },
     "stability_pool": {
-      "vk": "ace2894585f8820a3b230ab57a24df35de1dd4b7234d9d38bde78fa643871752",
-      "app_id": "c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf",
-      "spell_tx": "ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c",
-      "wasm": "target/wasm32-wasip1/release/zkusd-stability-pool-app.wasm"
+      "vk": "98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9",
+      "app_id": "001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b",
+      "spell_tx": "20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c",
+      "wasm": "apps/web/public/wasm/zkusd-stability-pool-app.wasm",
+      "note": "V3 - Deployed 2026-01-21 with wasm32-wasip1 target"
+    },
+    "vault_manager": {
+      "vk": "833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f",
+      "app_id": "ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9",
+      "spell_tx": "aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02",
+      "wasm": "apps/web/public/wasm/zkusd-vault-manager-app.wasm",
+      "note": "V3 - Deployed 2026-01-21 with wasm32-wasip1 target"
     }
   },
 
   "addresses": {
-    "admin": "d54fa831ac19574c5503f1cbd505934a0bab3cee",
-    "admin_padded": "d54fa831ac19574c5503f1cbd505934a0bab3cee000000000000000000000000",
+    "admin": "0fef72e8286c0dd8d5dd569e930433c322330d338650adc1aa0a4502d35a1748",
     "output_address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq"
   },
 
   "app_refs": {
     "price_oracle": "n/26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5/98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d",
-    "token_nft": "n/eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540/e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe",
-    "token_fungible": "t/eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540/e056dfec9aea81d33caed5470c51c2f86bb6551aced4c570b66cbdc3594275fe",
-    "vault_manager": "n/c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490/d535fdc354e87af6e750bfe957a4a90e467eba1457f37f05c858beaf09e763bf",
-    "stability_pool": "n/c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf/ace2894585f8820a3b230ab57a24df35de1dd4b7234d9d38bde78fa643871752"
-  },
-
-  "vk_bytes": {
-    "_note": "VKs are used in app definitions (n/{app_id}/{vk}), NOT for cross-references!",
-    "token": [224, 86, 223, 236, 154, 234, 129, 211, 60, 174, 213, 71, 12, 81, 194, 248, 107, 182, 85, 26, 206, 212, 197, 112, 182, 108, 189, 195, 89, 66, 117, 254],
-    "vault_manager": [213, 53, 253, 195, 84, 232, 122, 246, 231, 80, 191, 233, 87, 164, 169, 14, 70, 126, 186, 20, 87, 243, 127, 5, 200, 88, 190, 175, 9, 231, 99, 191],
-    "stability_pool": [172, 226, 137, 69, 133, 248, 130, 10, 59, 35, 10, 181, 122, 36, 223, 53, 222, 29, 212, 183, 35, 77, 157, 56, 189, 231, 143, 166, 67, 135, 23, 82],
-    "oracle": [152, 178, 238, 235, 55, 80, 28, 159, 111, 129, 89, 19, 200, 9, 53, 189, 70, 185, 50, 133, 18, 87, 14, 240, 103, 195, 208, 35, 121, 244, 199, 61]
+    "token_nft": "n/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
+    "token_fungible": "t/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
+    "stability_pool": "n/001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b/98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9",
+    "vault_manager": "n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f"
   },
 
   "app_id_bytes": {
     "_note": "App IDs (app.identity.0) - USE THESE for cross-references in state!",
-    "token": [235, 107, 174, 4, 158, 243, 102, 222, 8, 24, 134, 244, 247, 18, 190, 110, 62, 185, 145, 201, 39, 41, 170, 228, 217, 250, 182, 128, 162, 154, 213, 64],
-    "vault_manager": [193, 196, 122, 179, 42, 112, 127, 159, 173, 63, 87, 170, 9, 197, 128, 32, 208, 197, 206, 67, 242, 78, 229, 253, 12, 34, 190, 65, 17, 76, 212, 144],
-    "stability_pool": [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191],
+    "token": [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241],
+    "stability_pool": [0, 21, 55, 73, 94, 204, 27, 193, 225, 152, 146, 5, 46, 206, 153, 11, 203, 207, 48, 26, 4, 62, 92, 225, 1, 150, 128, 215, 33, 165, 220, 107],
+    "vault_manager": [202, 138, 178, 220, 48, 201, 123, 123, 225, 214, 233, 23, 92, 51, 248, 40, 170, 196, 71, 145, 127, 245, 96, 95, 202, 15, 243, 172, 255, 203, 31, 169],
     "oracle": [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+  },
+
+  "vk_bytes": {
+    "_note": "VKs are used in app definitions (n/{app_id}/{vk})",
+    "token": "ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
+    "stability_pool": "98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9",
+    "vault_manager": "833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f",
+    "oracle": "98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d"
   },
 
   "protocol_params": {
@@ -81,75 +80,50 @@
     "scale_factor": "1000000000000000000"
   },
 
-  "initial_state": {
-    "_note": "V2 deployment with CORRECT cross-references using App IDs",
-    "token": {
-      "authorized_minter": "c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490",
-      "authorized_minter_note": "This is VM App ID (correct!)",
-      "total_supply": 0
-    },
-    "vault_manager": {
-      "zkusd_token_id": "eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540",
-      "zkusd_token_id_note": "This is Token App ID (correct!)",
-      "total_collateral": 0,
-      "total_debt": 0,
-      "active_vault_count": 0,
-      "base_rate": 50,
-      "is_paused": false
-    },
-    "stability_pool": {
-      "total_zkusd": 0,
-      "total_btc": 0,
-      "product_p": "1000000000000000000",
-      "depositor_count": 0
-    }
-  },
-
   "cross_references": {
-    "_note": "CRITICAL: All cross-references now correctly use App IDs",
-    "token_authorized_minter": "vault_manager.app_id = c1c47ab32a707f9fad3f57aa09c58020d0c5ce43f24ee5fd0c22be41114cd490",
-    "vault_manager_token_id": "zkusd_token.app_id = eb6bae049ef366de081886f4f712be6e3eb991c92729aae4d9fab680a29ad540",
-    "vault_manager_sp_id": "stability_pool.app_id = c11c5451c834f54ed56227b3fb48d366de2c139c2a0f559aeebfb45af8a067bf",
-    "vault_manager_oracle_id": "price_oracle.app_id = 26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5"
-  },
-
-  "cross_reference_bytes": {
-    "_note": "Byte arrays for YAML spells - these are the correct App IDs",
-    "token_authorized_minter_vm_app_id": [193, 196, 122, 179, 42, 112, 127, 159, 173, 63, 87, 170, 9, 197, 128, 32, 208, 197, 206, 67, 242, 78, 229, 253, 12, 34, 190, 65, 17, 76, 212, 144],
-    "vault_manager_token_id": [235, 107, 174, 4, 158, 243, 102, 222, 8, 24, 134, 244, 247, 18, 190, 110, 62, 185, 145, 201, 39, 41, 170, 228, 217, 250, 182, 128, 162, 154, 213, 64],
-    "vault_manager_sp_id": [193, 28, 84, 81, 200, 52, 245, 78, 213, 98, 39, 179, 251, 72, 211, 102, 222, 44, 19, 156, 42, 15, 85, 154, 238, 191, 180, 90, 248, 160, 103, 191],
-    "vault_manager_oracle_id": [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+    "_note": "All cross-references use App IDs (not VKs)",
+    "token_authorized_minter": "vault_manager.app_id = ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9",
+    "vault_manager_token_id": "zkusd_token.app_id = 7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1",
+    "vault_manager_sp_id": "stability_pool.app_id = 001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b",
+    "vault_manager_oracle_id": "price_oracle.app_id = 26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5",
+    "stability_pool_token_id": "zkusd_token.app_id = 7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1",
+    "stability_pool_vm_id": "vault_manager.app_id = ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9"
   },
 
   "deployed_utxos": {
     "price_oracle_state": {
       "utxo": "03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4:0",
       "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
-      "initial_price_usd": 104000,
       "status": "confirmed",
       "explorer": "https://mempool.space/testnet4/tx/03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4"
     },
     "token_state": {
-      "utxo": "458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423:0",
+      "utxo": "6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988:0",
       "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
       "status": "confirmed",
-      "block_height": 115703,
-      "explorer": "https://mempool.space/testnet4/tx/458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423",
-      "note": "V2 deployment with correct authorized_minter"
-    },
-    "vault_manager_state": {
-      "utxo": "b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3:0",
-      "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
-      "status": "confirmed",
-      "block_height": 115703,
-      "explorer": "https://mempool.space/testnet4/tx/b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3",
-      "note": "V2 deployment with correct zkusd_token_id"
+      "explorer": "https://mempool.space/testnet4/tx/6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988",
+      "note": "V3 deployment with wasm32-wasip1 target"
     },
     "stability_pool_state": {
-      "utxo": "ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c:0",
+      "utxo": "20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c:0",
       "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
-      "status": "confirmed",
-      "explorer": "https://mempool.space/testnet4/tx/ea78d29a8fcd3f5892d4422dc5ef2c914a5d0ed51076f9d92f212d64c0f7194c"
+      "status": "pending",
+      "explorer": "https://mempool.space/testnet4/tx/20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c",
+      "note": "V3 deployment 2026-01-21"
+    },
+    "vault_manager_state": {
+      "utxo": "aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02:0",
+      "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
+      "status": "pending",
+      "explorer": "https://mempool.space/testnet4/tx/aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02",
+      "note": "V3 deployment 2026-01-21"
     }
+  },
+
+  "build_notes": {
+    "_critical": "ALWAYS use 'charms app build' to compile WASM - it uses wasm32-wasip1 target",
+    "wrong_target": "wasm32-unknown-unknown causes 'UnreachableCodeReached' errors",
+    "correct_target": "wasm32-wasip1 (used automatically by charms app build)",
+    "docs": "See contracts/BUILDING.md for detailed instructions"
   }
 }

@@ -1,68 +1,54 @@
 {
-  "status": "partial_deployment",
+  "status": "deployed",
+  "version": "V3",
   "network": "testnet4",
-  "updated_at": "2025-12-15T00:10:00Z",
+  "deployed_at": "2026-01-21T22:19:00Z",
+  "charms_version": 8,
+
   "wallet": {
     "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
-    "funded": false,
-    "note": "Original UTXO spent by commit transaction"
+    "note": "Testnet4 deployment wallet"
   },
-  "commit_transaction": {
-    "txid": "8339c04480269fdae4114a25f250af4279fb604aeedfd7a048ae6d7d18beca1a",
-    "status": "broadcast_in_mempool",
-    "output_address": "tb1pe4p3wsermphlx97eds9kf8hsu5sqemrqcy4n77t2vxhm56tu3vqq24ratk",
-    "output_value_sats": 499778,
-    "mempool_link": "https://mempool.space/testnet4/tx/8339c04480269fdae4114a25f250af4279fb604aeedfd7a048ae6d7d18beca1a"
-  },
-  "reveal_transaction": {
-    "status": "blocked",
-    "reason": "References spent funding UTXO - Bitcoin Core rejected as conflicting transaction"
-  },
+
   "contracts": {
     "price_oracle": {
-      "built": true,
-      "wasm": "target/wasm32-wasip1/release/zkusd-price-oracle-app.wasm",
-      "vk": "b44db07ac1697704ea7170f4e857c50c4545f0de00dfcc11835dc6efb0c27c32",
-      "app_id": "606fb4c5450d5eac07b316664d288891c82813a7e504f5a4a869052988f504a9"
-    },
-    "vault_manager": {
-      "built": true,
-      "wasm": "target/wasm32-wasip1/release/zkusd-vault-manager-app.wasm",
-      "vk": "fa4dd79f522f1904e92b95d559d3e2bbbca1300c78518bf02317865aa3fb233b"
+      "status": "confirmed",
+      "appId": "26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5",
+      "vk": "98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d",
+      "spellTx": "03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4",
+      "stateUtxo": "03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4:0",
+      "explorer": "https://mempool.space/testnet4/tx/03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4"
     },
     "zkusd_token": {
-      "built": true,
-      "wasm": "target/wasm32-wasip1/release/zkusd-token-app.wasm",
-      "vk": "d1564fbc8acdc3feec12916088d3a73a6b0f901d90ef34102b646d0754665ab0"
+      "status": "confirmed",
+      "appId": "7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1",
+      "vk": "ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
+      "spellTx": "6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988",
+      "stateUtxo": "6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988:0",
+      "explorer": "https://mempool.space/testnet4/tx/6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988"
     },
     "stability_pool": {
-      "built": true,
-      "wasm": "target/wasm32-wasip1/release/zkusd-stability-pool-app.wasm",
-      "vk": "16965b07571c5e98d14dae252f693642b030c02cf4ab662cbc7c3953a2f70118"
+      "status": "confirmed",
+      "appId": "001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b",
+      "vk": "98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9",
+      "spellTx": "20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c",
+      "stateUtxo": "20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c:0",
+      "explorer": "https://mempool.space/testnet4/tx/20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c"
+    },
+    "vault_manager": {
+      "status": "confirmed",
+      "appId": "ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9",
+      "vk": "833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f",
+      "spellTx": "aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02",
+      "stateUtxo": "aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02:0",
+      "explorer": "https://mempool.space/testnet4/tx/aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02"
     }
   },
-  "charms": {
-    "version": "0.10.0",
-    "spell_validate": "passed",
-    "spell_prove": "passed",
-    "zk_proof_generated": true
-  },
-  "issue": {
-    "type": "package_relay_conflict",
-    "description": "Bitcoin Core submitpackage rejected commit+reveal package due to 'conflict-in-package' - both transactions spend the same funding UTXO",
-    "bitcoin_core_version": "v30.0.0"
-  },
-  "accomplishments": [
-    "All 4 contracts compiled for WASM (wasip1) target",
-    "Verification keys generated for all apps",
-    "Oracle Initialize action added for first-time deployment",
-    "Spell YAML validated successfully with mock mode",
-    "ZK proof generated successfully with SP1",
-    "Commit transaction signed and broadcast to testnet4 mempool"
-  ],
-  "next_steps": [
-    "1. Get new testnet4 UTXO from faucet",
-    "2. Regenerate spell with new funding UTXO",
-    "3. Submit transactions as proper CPFP package or use Charms server"
-  ]
+
+  "build_critical_info": {
+    "wasm_target": "wasm32-wasip1",
+    "build_command": "charms app build",
+    "wrong_target_error": "UnreachableCodeReached - caused by wasm32-unknown-unknown target",
+    "docs": "contracts/BUILDING.md"
+  }
 }

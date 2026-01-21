@@ -31,6 +31,6 @@ export {
   TESTNET4_CONFIG,
   TESTNET4_CROSS_REFS,
   TESTNET4_NEEDS_REDEPLOYMENT,
-  TESTNET4_NEW_VKS,
+  TESTNET4_VKS,
 } from './testnet4';
 export { MAINNET_CONFIG, MAINNET_CROSS_REFS, validateMainnetConfig } from './mainnet';

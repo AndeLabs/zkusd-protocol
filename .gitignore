@@ -57,6 +57,11 @@ coverage
 .vercel
 .env*.local
 
+# Credentials (never commit private keys)
+**/CREDENTIALS.md
+**/wallet.json
+*.hex
+
 # Planning docs
 *_PROGRESS.md
 *_STATUS.md

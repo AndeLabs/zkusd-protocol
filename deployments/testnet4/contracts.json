@@ -1,28 +1,35 @@
 {
+  "_note": "V3 Deployment - 2026-01-21 - All contracts with wasm32-wasip1 target",
   "network": "testnet4",
-  "deployed_at": null,
-  "charms_version": "0.10.0",
+  "deployed_at": "2026-01-21T22:19:00Z",
+  "charms_version": 8,
   "contracts": {
     "price_oracle": {
-      "wasm": "target/wasm32-wasip1/release/zkusd-price-oracle-app.wasm",
-      "vk": "b28d5bbc747e0adf79403b4dd00b91b9afe8935ba6e43c49c32e88c79ef1a2b7"
-    },
-    "vault_manager": {
-      "wasm": "target/wasm32-wasip1/release/zkusd-vault-manager-app.wasm",
-      "vk": "fa4dd79f522f1904e92b95d559d3e2bbbca1300c78518bf02317865aa3fb233b"
+      "appId": "26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5",
+      "vk": "98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d",
+      "spellTx": "03e362aacd811cbe8cd33a8f6a70d6fb568a39029fc6a31bc83f3d4ab8276cf4",
+      "wasm": "apps/web/public/wasm/zkusd-price-oracle-app.wasm"
     },
     "zkusd_token": {
-      "wasm": "target/wasm32-wasip1/release/zkusd-token-app.wasm",
-      "vk": "d1564fbc8acdc3feec12916088d3a73a6b0f901d90ef34102b646d0754665ab0"
+      "appId": "7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1",
+      "vk": "ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
+      "spellTx": "6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988",
+      "wasm": "apps/web/public/wasm/zkusd-token-app.wasm"
     },
     "stability_pool": {
-      "wasm": "target/wasm32-wasip1/release/zkusd-stability-pool-app.wasm",
-      "vk": "16965b07571c5e98d14dae252f693642b030c02cf4ab662cbc7c3953a2f70118"
+      "appId": "001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b",
+      "vk": "98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9",
+      "spellTx": "20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c",
+      "wasm": "apps/web/public/wasm/zkusd-stability-pool-app.wasm"
+    },
+    "vault_manager": {
+      "appId": "ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9",
+      "vk": "833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f",
+      "spellTx": "aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02",
+      "wasm": "apps/web/public/wasm/zkusd-vault-manager-app.wasm"
     }
   },
-  "funding": {
-    "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq",
-    "utxo": "d629a85353048e869baf09f80b21ae1a668f1a333eddd46fc22c17aa811aac6a:0",
-    "value_sats": 500000
+  "wallet": {
+    "address": "tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq"
   }
 }
