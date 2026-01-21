@@ -49,6 +49,14 @@ const BPS_DENOMINATOR = 10_000n;
 /** Minimum collateral ratio (110% = 11000 bps) */
 const MCR_BPS = 11_000;
 
+/**
+ * Liquidation reserve added to all vault debts.
+ * This is a fixed amount held as gas compensation for liquidators.
+ * Testnet: 2 zkUSD = 200_000_000 (8 decimals)
+ * Mainnet: 200 zkUSD = 20_000_000_000 (8 decimals)
+ */
+const LIQUIDATION_RESERVE = 200_000_000n; // 2 zkUSD for testnet
+
 // ============================================================================
 // Utilities
 // ============================================================================
@@ -267,11 +275,14 @@ export class VaultService {
     // Generate deterministic vault ID from collateral UTXO
     const vaultId = generateVaultId(params.collateralUtxo);
 
-    // Calculate fee and total debt
+    // Calculate vault debt with liquidation reserve
+    // CRITICAL: The contract expects debt = user_debt + LIQUIDATION_RESERVE (NOT fee!)
+    // The fee is charged separately and NOT stored in the vault's debt field.
     const state = await this.getProtocolState().catch(() => null);
     const baseRate = state?.protocol.baseRate ?? DEFAULT_BASE_RATE_BPS;
-    const fee = this.calculateOpeningFee(params.debt, baseRate);
-    const totalDebt = params.debt + fee;
+
+    // Vault debt includes the liquidation reserve (gas compensation for liquidators)
+    const vaultDebt = params.debt + LIQUIDATION_RESERVE;
 
     // Get app references from config
     const vmAppRef = config.contracts.vaultManager.appRef;
@@ -313,7 +324,7 @@ export class VaultService {
     const updatedVmState = {
       protocol: {
         total_collateral: currentTotalCollateral + safeToNumber(params.collateral, 'collateral'),
-        total_debt: currentTotalDebt + safeToNumber(totalDebt, 'totalDebt'),
+        total_debt: currentTotalDebt + safeToNumber(vaultDebt, 'vaultDebt'),
         active_vault_count: (state?.protocol.activeVaultCount ?? 0) + 1,
         base_rate: baseRate,
         last_fee_update_block: currentBlock,
@@ -333,7 +344,7 @@ export class VaultService {
       id: hexToBytes(vaultId, 32),           // VaultId = [u8; 32]
       owner: hexToBytes(params.ownerPubkey, 32), // Address = [u8; 32]
       collateral: safeToNumber(params.collateral, 'collateral'),
-      debt: safeToNumber(totalDebt, 'debt'),
+      debt: safeToNumber(vaultDebt, 'debt'),
       created_at: currentBlock,
       last_updated: currentBlock,
       status: VAULT_STATUS_ACTIVE,
@@ -579,13 +590,13 @@ export class VaultService {
     const tokenAppRef = config.contracts.zkusdToken.appRef.replace('n/', 't/');
 
     // Calculate total debt to repay
-    const totalDebt = params.vaultState.debt +
+    const vaultDebt = params.vaultState.debt +
       params.vaultState.accruedInterest +
       params.vaultState.redistributedDebt;
 
     // Calculate excess zkUSD
-    const excessZkusd = params.zkusdAmount > totalDebt
-      ? params.zkusdAmount - totalDebt
+    const excessZkusd = params.zkusdAmount > vaultDebt
+      ? params.zkusdAmount - vaultDebt
       : 0n;
 
     const spell: Spell = {
@@ -659,24 +670,25 @@ export class VaultService {
     valid: boolean;
     icr: number;
     fee: bigint;
-    totalDebt: bigint;
+    vaultDebt: bigint;
     error?: string;
   }> {
     const price = await this.client.oracle.getPrice();
     const state = await this.getProtocolState();
 
     if (!state) {
-      return { valid: false, icr: 0, fee: 0n, totalDebt: 0n, error: 'Protocol not initialized' };
+      return { valid: false, icr: 0, fee: 0n, vaultDebt: 0n, error: 'Protocol not initialized' };
     }
 
     const fee = this.calculateOpeningFee(params.debt, state.protocol.baseRate);
-    const totalDebt = params.debt + fee;
-    const icr = calculateICR(params.collateral, totalDebt, price.price);
+    // Vault debt = user debt + liquidation reserve (NOT fee!)
+    const vaultDebt = params.debt + LIQUIDATION_RESERVE;
+    const icr = calculateICR(params.collateral, vaultDebt, price.price);
 
     if (!isVaultHealthy(icr)) {
-      return { valid: false, icr, fee, totalDebt, error: 'ICR below minimum' };
+      return { valid: false, icr, fee, vaultDebt, error: 'ICR below minimum' };
     }
 
-    return { valid: true, icr, fee, totalDebt };
+    return { valid: true, icr, fee, vaultDebt };
   }
 }
