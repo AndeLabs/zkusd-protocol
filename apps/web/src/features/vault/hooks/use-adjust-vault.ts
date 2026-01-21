@@ -165,6 +165,9 @@ export function useAdjustVault() {
 
         toast.loading('Generating zero-knowledge proof...', { id: 'adjust-tx' });
 
+        // Check if running in demo mode
+        const isDemoMode = client.isDemoMode();
+
         // Get fee estimate
         const fees = await client.getFeeEstimates();
 
@@ -182,58 +185,75 @@ export function useAdjustVault() {
           feeRate: fees.halfHourFee,
         });
 
-        setStatus('signing');
-        toast.loading('Please sign the transaction in your wallet...', {
-          id: 'adjust-tx',
-        });
+        let spellTxId: string;
 
-        // Sign transactions
-        let signedCommitTx: string;
-        let signedSpellTx: string;
+        if (isDemoMode) {
+          // Demo mode: skip signing and broadcasting, generate fake txid
+          setStatus('broadcasting');
+          toast.loading('Simulating transaction (demo mode)...', { id: 'adjust-tx' });
 
-        try {
-          signedCommitTx = await window.unisat.signPsbt(proveResult.commitTx, {
-            autoFinalized: true,
+          // Simulate network delay for realistic UX
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+
+          // Generate deterministic demo txid
+          spellTxId = generateDemoTxId(params.vault.id + ':adjust:' + Date.now());
+
+          console.log('[AdjustVault DEMO] Simulated spell TX:', spellTxId);
+        } else {
+          // Real mode: sign with wallet and broadcast
+          setStatus('signing');
+          toast.loading('Please sign the transaction in your wallet...', {
+            id: 'adjust-tx',
           });
-          signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
-            autoFinalized: true,
-          });
-        } catch (signError) {
-          const errorMessage = signError instanceof Error ? signError.message : String(signError);
-          if (
-            errorMessage.toLowerCase().includes('user rejected') ||
-            errorMessage.toLowerCase().includes('cancelled') ||
-            errorMessage.toLowerCase().includes('denied')
-          ) {
-            throw new Error('Transaction signing was cancelled');
+
+          // Sign transactions
+          let signedCommitTx: string;
+          let signedSpellTx: string;
+
+          try {
+            signedCommitTx = await window.unisat.signPsbt(proveResult.commitTx, {
+              autoFinalized: true,
+            });
+            signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
+              autoFinalized: true,
+            });
+          } catch (signError) {
+            const errorMessage = signError instanceof Error ? signError.message : String(signError);
+            if (
+              errorMessage.toLowerCase().includes('user rejected') ||
+              errorMessage.toLowerCase().includes('cancelled') ||
+              errorMessage.toLowerCase().includes('denied')
+            ) {
+              throw new Error('Transaction signing was cancelled');
+            }
+            console.warn(
+              '[AdjustVault] PSBT signing failed, using original transactions:',
+              errorMessage
+            );
+            signedCommitTx = proveResult.commitTx;
+            signedSpellTx = proveResult.spellTx;
           }
-          console.warn(
-            '[AdjustVault] PSBT signing failed, using original transactions:',
-            errorMessage
-          );
-          signedCommitTx = proveResult.commitTx;
-          signedSpellTx = proveResult.spellTx;
+
+          setStatus('broadcasting');
+          toast.loading('Broadcasting commit transaction...', { id: 'adjust-tx' });
+
+          // Broadcast commit transaction first
+          const commitTxId = await client.bitcoin.broadcast(signedCommitTx);
+
+          // Wait for mempool propagation
+          toast.loading('Waiting for network propagation...', { id: 'adjust-tx' });
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          // Verify commit TX is in mempool before broadcasting spell
+          try {
+            await client.bitcoin.getTransaction(commitTxId);
+          } catch {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+          }
+
+          toast.loading('Broadcasting spell transaction...', { id: 'adjust-tx' });
+          spellTxId = await client.bitcoin.broadcast(signedSpellTx);
         }
-
-        setStatus('broadcasting');
-        toast.loading('Broadcasting commit transaction...', { id: 'adjust-tx' });
-
-        // Broadcast commit transaction first
-        const commitTxId = await client.bitcoin.broadcast(signedCommitTx);
-
-        // Wait for mempool propagation
-        toast.loading('Waiting for network propagation...', { id: 'adjust-tx' });
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        // Verify commit TX is in mempool before broadcasting spell
-        try {
-          await client.bitcoin.getTransaction(commitTxId);
-        } catch {
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-
-        toast.loading('Broadcasting spell transaction...', { id: 'adjust-tx' });
-        const spellTxId = await client.bitcoin.broadcast(signedSpellTx);
 
         // Update local vault state
         updateVault(params.vault.id, {
@@ -244,16 +264,24 @@ export function useAdjustVault() {
         });
 
         setStatus('success');
-        toast.success('Vault adjusted successfully!', {
-          id: 'adjust-tx',
-          description: `TX: ${spellTxId.slice(0, 8)}...${spellTxId.slice(-8)}`,
-          action: {
-            label: 'View',
-            onClick: () => {
-              window.open(client.getTxUrl(spellTxId), '_blank');
+
+        if (isDemoMode) {
+          toast.success('Vault adjusted (demo mode)', {
+            id: 'adjust-tx',
+            description: 'This is a simulated transaction for testing',
+          });
+        } else {
+          toast.success('Vault adjusted successfully!', {
+            id: 'adjust-tx',
+            description: `TX: ${spellTxId.slice(0, 8)}...${spellTxId.slice(-8)}`,
+            action: {
+              label: 'View',
+              onClick: () => {
+                window.open(client.getTxUrl(spellTxId), '_blank');
+              },
             },
-          },
-        });
+          });
+        }
 
         return {
           txId: spellTxId,
@@ -294,4 +322,22 @@ export function useAdjustVault() {
     data: mutation.data,
     reset,
   };
+}
+
+// Helper to generate deterministic demo transaction ID
+function generateDemoTxId(seed: string): string {
+  let hash1 = 0;
+  let hash2 = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash1 = (hash1 << 5) - hash1 + char;
+    hash1 = hash1 & hash1;
+    hash2 = (hash2 << 7) - hash2 + char;
+    hash2 = hash2 & hash2;
+  }
+  const part1 = Math.abs(hash1).toString(16).padStart(16, '0');
+  const part2 = Math.abs(hash2).toString(16).padStart(16, '0');
+  const part3 = Math.abs(hash1 ^ hash2).toString(16).padStart(16, '0');
+  const part4 = Math.abs(hash1 + hash2).toString(16).padStart(16, '0');
+  return (part1 + part2 + part3 + part4).slice(0, 64);
 }

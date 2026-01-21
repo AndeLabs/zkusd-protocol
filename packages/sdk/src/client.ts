@@ -49,10 +49,12 @@ export class ZkUsdClient {
   readonly prover: ProverService;
 
   private deploymentConfig: DeploymentConfig | null = null;
+  private _isDemoMode: boolean;
 
   constructor(config: ZkUsdClientConfig) {
     this.network = config.network;
     this.networkConfig = NETWORK_CONFIGS[config.network];
+    this._isDemoMode = config.demoMode ?? false;
 
     // Initialize services
     this.bitcoin = new BitcoinApiService(config.network, config.bitcoinRpcUrl);
@@ -65,6 +67,13 @@ export class ZkUsdClient {
     this.vault = new VaultService(this);
     this.oracle = new OracleService(this);
     this.stabilityPool = new StabilityPoolService(this);
+  }
+
+  /**
+   * Check if running in demo mode (simulated transactions)
+   */
+  isDemoMode(): boolean {
+    return this._isDemoMode || this.prover.isDemo();
   }
 
   /**

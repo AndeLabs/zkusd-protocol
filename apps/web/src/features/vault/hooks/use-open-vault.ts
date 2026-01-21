@@ -216,6 +216,9 @@ export function useOpenVault() {
 
         toast.loading('Generating zero-knowledge proof...', { id: 'vault-tx' });
 
+        // Check if running in demo mode
+        const isDemoMode = client.isDemoMode();
+
         // Execute the spell through the prover
         // - prev_txs: Include BOTH collateral and fee UTXO transactions
         // - funding_utxo: The FEE UTXO (DIFFERENT from collateral UTXO!)
@@ -232,75 +235,103 @@ export function useOpenVault() {
           feeRate: fees.halfHourFee,
         });
 
-        setStatus('signing');
-        toast.loading('Please sign the transaction in your wallet...', {
-          id: 'vault-tx',
-        });
+        let commitTxId: string;
+        let spellTxId: string;
 
-        // Sign the commit transaction with Unisat
-        let signedCommitTx: string;
-        let signedSpellTx: string;
+        if (isDemoMode) {
+          // Demo mode: skip signing and broadcasting, generate fake txids
+          setStatus('broadcasting');
+          toast.loading('Simulating transaction (demo mode)...', { id: 'vault-tx' });
 
-        try {
-          // Sign as PSBT
-          signedCommitTx = await window.unisat.signPsbt(proveResult.commitTx, {
-            autoFinalized: true,
+          // Simulate network delay for realistic UX
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+
+          // Generate deterministic demo txids based on collateral UTXO
+          commitTxId = generateDemoTxId(collateralUtxoId + ':commit');
+          spellTxId = generateDemoTxId(collateralUtxoId + ':spell');
+
+          console.log('[OpenVault DEMO] Simulated commit TX:', commitTxId);
+          console.log('[OpenVault DEMO] Simulated spell TX:', spellTxId);
+        } else {
+          // Real mode: sign with wallet and broadcast
+          setStatus('signing');
+          toast.loading('Please sign the transaction in your wallet...', {
+            id: 'vault-tx',
           });
-          signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
-            autoFinalized: true,
-          });
-        } catch (signError) {
-          // Check if user rejected the signing request
-          const errorMessage = signError instanceof Error ? signError.message : String(signError);
-          if (
-            errorMessage.toLowerCase().includes('user rejected') ||
-            errorMessage.toLowerCase().includes('cancelled') ||
-            errorMessage.toLowerCase().includes('denied')
-          ) {
-            throw new Error('Transaction signing was cancelled');
+
+          // Sign the commit transaction with Unisat
+          let signedCommitTx: string;
+          let signedSpellTx: string;
+
+          try {
+            // Sign as PSBT
+            signedCommitTx = await window.unisat.signPsbt(proveResult.commitTx, {
+              autoFinalized: true,
+            });
+            signedSpellTx = await window.unisat.signPsbt(proveResult.spellTx, {
+              autoFinalized: true,
+            });
+          } catch (signError) {
+            // Check if user rejected the signing request
+            const errorMessage = signError instanceof Error ? signError.message : String(signError);
+            if (
+              errorMessage.toLowerCase().includes('user rejected') ||
+              errorMessage.toLowerCase().includes('cancelled') ||
+              errorMessage.toLowerCase().includes('denied')
+            ) {
+              throw new Error('Transaction signing was cancelled');
+            }
+            // For other errors (e.g., already finalized), try using original transactions
+            console.warn(
+              '[OpenVault] PSBT signing failed, using original transactions:',
+              errorMessage
+            );
+            signedCommitTx = proveResult.commitTx;
+            signedSpellTx = proveResult.spellTx;
           }
-          // For other errors (e.g., already finalized), try using original transactions
-          console.warn(
-            '[OpenVault] PSBT signing failed, using original transactions:',
-            errorMessage
-          );
-          signedCommitTx = proveResult.commitTx;
-          signedSpellTx = proveResult.spellTx;
+
+          setStatus('broadcasting');
+          toast.loading('Broadcasting commit transaction...', { id: 'vault-tx' });
+
+          // Broadcast commit transaction first
+          commitTxId = await client.bitcoin.broadcast(signedCommitTx);
+
+          // Wait for mempool propagation (5 seconds for better reliability)
+          toast.loading('Waiting for network propagation...', { id: 'vault-tx' });
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          // Verify commit TX is in mempool before broadcasting spell
+          try {
+            await client.bitcoin.getTransaction(commitTxId);
+          } catch {
+            // If we can't find commit TX, wait a bit more and retry
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+          }
+
+          toast.loading('Broadcasting spell transaction...', { id: 'vault-tx' });
+          // Broadcast spell transaction
+          spellTxId = await client.bitcoin.broadcast(signedSpellTx);
         }
-
-        setStatus('broadcasting');
-        toast.loading('Broadcasting commit transaction...', { id: 'vault-tx' });
-
-        // Broadcast commit transaction first
-        const commitTxId = await client.bitcoin.broadcast(signedCommitTx);
-
-        // Wait for mempool propagation (5 seconds for better reliability)
-        toast.loading('Waiting for network propagation...', { id: 'vault-tx' });
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        // Verify commit TX is in mempool before broadcasting spell
-        try {
-          await client.bitcoin.getTransaction(commitTxId);
-        } catch {
-          // If we can't find commit TX, wait a bit more and retry
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-
-        toast.loading('Broadcasting spell transaction...', { id: 'vault-tx' });
-        // Broadcast spell transaction
-        const spellTxId = await client.bitcoin.broadcast(signedSpellTx);
 
         setStatus('success');
-        toast.success('Vault opened successfully!', {
-          id: 'vault-tx',
-          description: `TX: ${spellTxId.slice(0, 8)}...${spellTxId.slice(-8)}`,
-          action: {
-            label: 'View',
-            onClick: () => {
-              window.open(client.getTxUrl(spellTxId), '_blank');
+
+        if (isDemoMode) {
+          toast.success('Vault opened (demo mode)', {
+            id: 'vault-tx',
+            description: 'This is a simulated transaction for testing',
+          });
+        } else {
+          toast.success('Vault opened successfully!', {
+            id: 'vault-tx',
+            description: `TX: ${spellTxId.slice(0, 8)}...${spellTxId.slice(-8)}`,
+            action: {
+              label: 'View',
+              onClick: () => {
+                window.open(client.getTxUrl(spellTxId), '_blank');
+              },
             },
-          },
-        });
+          });
+        }
 
         // Generate vault ID from collateral UTXO (matches SDK)
         const vaultId = generateVaultId(collateralUtxoId);
@@ -377,4 +408,23 @@ function generateVaultId(fundingUtxo: string): string {
   }
   const hexPart = Math.abs(hash).toString(16).padStart(16, '0');
   return hexPart.repeat(4);
+}
+
+// Helper to generate deterministic demo transaction ID (looks like a real Bitcoin txid)
+function generateDemoTxId(seed: string): string {
+  let hash1 = 0;
+  let hash2 = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash1 = (hash1 << 5) - hash1 + char;
+    hash1 = hash1 & hash1;
+    hash2 = (hash2 << 7) - hash2 + char;
+    hash2 = hash2 & hash2;
+  }
+  // Create a 64-character hex string that looks like a Bitcoin txid
+  const part1 = Math.abs(hash1).toString(16).padStart(16, '0');
+  const part2 = Math.abs(hash2).toString(16).padStart(16, '0');
+  const part3 = Math.abs(hash1 ^ hash2).toString(16).padStart(16, '0');
+  const part4 = Math.abs(hash1 + hash2).toString(16).padStart(16, '0');
+  return (part1 + part2 + part3 + part4).slice(0, 64);
 }
