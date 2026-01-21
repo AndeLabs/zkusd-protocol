@@ -2,6 +2,7 @@
 
 import { Button, Input, MaxButton, Skeleton } from '@/components/ui';
 import {
+  useStabilityPoolClaimGains,
   useStabilityPoolDeposit,
   useStabilityPoolState,
   useStabilityPoolWithdraw,
@@ -18,6 +19,7 @@ export function StabilityPoolForm() {
   const { data: userDeposit, isLoading: depositLoading } = useUserDeposit();
   const { deposit, isLoading: depositingLoading } = useStabilityPoolDeposit();
   const { withdraw, isLoading: withdrawingLoading } = useStabilityPoolWithdraw();
+  const { claimGains, isLoading: claimingLoading } = useStabilityPoolClaimGains();
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amountInput, setAmountInput] = useState('');
@@ -54,7 +56,20 @@ export function StabilityPoolForm() {
     }
   }, [userDeposit]);
 
-  const isLoading = depositingLoading || withdrawingLoading;
+  const handleClaimGains = useCallback(async () => {
+    if (!isConnected) {
+      connect();
+      return;
+    }
+    try {
+      await claimGains();
+    } catch {
+      // Error handled in hook
+    }
+  }, [isConnected, connect, claimGains]);
+
+  const isLoading = depositingLoading || withdrawingLoading || claimingLoading;
+  const hasClaimableGains = userDeposit && userDeposit.collateralGain > 0n;
 
   return (
     <div className="space-y-6">
@@ -107,17 +122,31 @@ export function StabilityPoolForm() {
           {depositLoading ? (
             <Skeleton className="h-6 w-32" />
           ) : userDeposit ? (
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Deposited</span>
-                <span className="font-mono text-white">{formatZkUSD(userDeposit.deposit)}</span>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Deposited</span>
+                  <span className="font-mono text-white">{formatZkUSD(userDeposit.deposit)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">BTC Rewards</span>
+                  <span className="font-mono text-amber-400">
+                    {formatBTC(Number(userDeposit.collateralGain))}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">BTC Rewards</span>
-                <span className="font-mono text-amber-400">
-                  {formatBTC(Number(userDeposit.collateralGain))}
-                </span>
-              </div>
+              {hasClaimableGains && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  fullWidth
+                  onClick={handleClaimGains}
+                  loading={claimingLoading}
+                  className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                >
+                  Claim {formatBTC(Number(userDeposit.collateralGain))} BTC
+                </Button>
+              )}
             </div>
           ) : (
             <p className="text-zinc-400 text-sm">No active deposit</p>

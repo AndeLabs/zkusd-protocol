@@ -132,3 +132,48 @@ export function useStabilityPoolWithdraw() {
     reset: mutation.reset,
   };
 }
+
+// Claim gains mutation hook
+// Claims accumulated BTC rewards from liquidations
+export function useStabilityPoolClaimGains() {
+  const { address, isConnected } = useWallet();
+  const queryClient = useQueryClient();
+
+  const claimFn = useCallback(
+    async (): Promise<null> => {
+      if (!isConnected || !address) {
+        throw new Error('Wallet not connected');
+      }
+
+      // Claiming gains requires finding the deposit UTXO via indexer
+      // The gains are sent to the user's address in the same transaction
+      toast.info('Claiming rewards requires deposit UTXO', {
+        id: 'sp-claim',
+        description: 'This feature requires a Charms indexer to locate your deposit.',
+      });
+
+      return null;
+    },
+    [isConnected, address]
+  );
+
+  const mutation = useMutation({
+    mutationFn: claimFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stability-pool-state'] });
+      queryClient.invalidateQueries({ queryKey: ['stability-pool-deposit'] });
+    },
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : 'Claim failed';
+      toast.error('Claim failed', { id: 'sp-claim', description: message });
+    },
+  });
+
+  return {
+    claimGains: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError,
+    reset: mutation.reset,
+  };
+}

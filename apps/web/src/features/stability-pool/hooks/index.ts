@@ -3,4 +3,5 @@ export {
   useUserDeposit,
   useStabilityPoolDeposit,
   useStabilityPoolWithdraw,
+  useStabilityPoolClaimGains,
 } from './use-stability-pool';
