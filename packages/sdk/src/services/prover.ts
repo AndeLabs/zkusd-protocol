@@ -17,6 +17,7 @@ import { getProverEndpoints, type ProverEndpoint } from '@zkusd/config';
 export interface Spell {
   version: number;
   apps: Record<string, SpellApp | string>;  // Allow string app refs (v8 format) or full SpellApp objects
+  refs?: SpellInput[];  // Reference inputs (read but not spent) - for protocol state
   ins: SpellInput[];
   outs: SpellOutput[];
   private_inputs?: Record<string, unknown>;  // Witness data for spell execution
@@ -216,8 +217,15 @@ export class ProverService {
     const wrappedPrevTxs = request.prev_txs.map(txHex => ({ bitcoin: txHex }));
 
     // Transform spell inputs: 'utxo' -> 'utxo_id' (API format)
+    // Also transform refs (reference inputs) the same way
     const transformedSpell = {
       ...request.spell,
+      // Transform refs array if present (reference inputs for protocol state)
+      refs: request.spell.refs?.map(ref => ({
+        utxo_id: (ref as { utxo?: string; utxo_id?: string }).utxo ||
+                 (ref as { utxo?: string; utxo_id?: string }).utxo_id,
+        charms: ref.charms || {},
+      })),
       ins: request.spell.ins.map(input => ({
         utxo_id: (input as { utxo?: string; utxo_id?: string }).utxo ||
                  (input as { utxo?: string; utxo_id?: string }).utxo_id,

@@ -238,12 +238,15 @@ export class VaultService {
    * Build spell for opening a new vault.
    *
    * Creates a Charms spell that:
-   * 1. Takes BTC from collateralUtxo as collateral (in spell inputs)
-   * 2. Mints a Vault NFT with the vault state
-   * 3. Mints zkUSD tokens to the owner
-   * 4. Returns change to the owner
+   * 1. References the current VaultManagerState (for validation)
+   * 2. Takes BTC from collateralUtxo as collateral (in spell inputs)
+   * 3. Outputs updated VaultManagerState with incremented counters
+   * 4. Mints a Vault NFT with the vault state
+   * 5. Mints zkUSD tokens to the owner
+   * 6. Returns change to the owner
    *
-   * IMPORTANT: Charms requires TWO SEPARATE UTXOs:
+   * IMPORTANT: Charms requires:
+   * - refs: Current VaultManagerState UTXO (read but not spent)
    * - collateralUtxo: Goes in spell's `ins` array (the UTXO being "enchanted")
    * - feeUtxo: Passed to prover as `funding_utxo` (MUST be different!)
    *
@@ -274,6 +277,56 @@ export class VaultService {
     const vmAppRef = config.contracts.vaultManager.appRef;
     const tokenAppRef = config.contracts.zkusdToken.appRef.replace('n/', 't/');
 
+    // Get app ID bytes for cross-references (from deployment config)
+    const tokenAppIdBytes = hexToBytes(config.contracts.zkusdToken.appId, 32);
+    const spAppIdBytes = hexToBytes(config.contracts.stabilityPool.appId, 32);
+    const oracleAppIdBytes = hexToBytes(config.contracts.priceOracle.appId, 32);
+    const adminBytes = hexToBytes(config.addresses.admin, 32);
+    // Active pool and default pool - using admin address padded
+    const activePoolBytes = hexToBytes(config.addresses.admin.replace('0f', 'ac'), 32);
+    const defaultPoolBytes = hexToBytes(config.addresses.admin.replace('0f', 'de'), 32);
+
+    // Build current VaultManagerState (initial state from deployment)
+    // This is the state that exists in the deployed UTXO
+    // Convert bigints to numbers for serialization
+    const currentVmState = {
+      protocol: {
+        total_collateral: Number(state?.protocol.totalCollateral ?? 0n),
+        total_debt: Number(state?.protocol.totalDebt ?? 0n),
+        active_vault_count: state?.protocol.activeVaultCount ?? 0,
+        base_rate: baseRate,
+        last_fee_update_block: state?.protocol.lastFeeUpdateBlock ?? 0,
+        admin: adminBytes,
+        is_paused: state?.protocol.isPaused ?? false,
+      },
+      zkusd_token_id: tokenAppIdBytes,
+      stability_pool_id: spAppIdBytes,
+      price_oracle_id: oracleAppIdBytes,
+      active_pool: activePoolBytes,
+      default_pool: defaultPoolBytes,
+    };
+
+    // Build updated VaultManagerState (with new vault added)
+    // Convert bigints to numbers for protocol state
+    const currentTotalCollateral = Number(state?.protocol.totalCollateral ?? 0n);
+    const currentTotalDebt = Number(state?.protocol.totalDebt ?? 0n);
+    const updatedVmState = {
+      protocol: {
+        total_collateral: currentTotalCollateral + safeToNumber(params.collateral, 'collateral'),
+        total_debt: currentTotalDebt + safeToNumber(totalDebt, 'totalDebt'),
+        active_vault_count: (state?.protocol.activeVaultCount ?? 0) + 1,
+        base_rate: baseRate,
+        last_fee_update_block: currentBlock,
+        admin: adminBytes,
+        is_paused: false,
+      },
+      zkusd_token_id: tokenAppIdBytes,
+      stability_pool_id: spAppIdBytes,
+      price_oracle_id: oracleAppIdBytes,
+      active_pool: activePoolBytes,
+      default_pool: defaultPoolBytes,
+    };
+
     // Build vault state matching Rust struct format
     // CRITICAL: Rust expects [u8; 32] byte arrays, NOT hex strings!
     const vaultState = {
@@ -291,8 +344,11 @@ export class VaultService {
       insurance_balance: 0,
     };
 
-    // Operation code for OpenVault (from generate-spell.sh: op: 16)
-    const OPEN_VAULT_OP = 16;
+    // Operation code for OpenVault
+    const OPEN_VAULT_OP = 16; // 0x10
+
+    // Get VaultManager state UTXO from deployment config
+    const vmStateUtxo = config.contracts.vaultManager.stateUtxo;
 
     const spell: Spell = {
       version: SPELL_VERSION,
@@ -317,8 +373,14 @@ export class VaultService {
           new_owner: null,
         },
       },
-      // Collateral UTXO goes in ins (NOT empty!)
-      // This UTXO gets "enchanted" with the vault charm
+      // Reference the current VaultManagerState UTXO (read but not spent)
+      refs: vmStateUtxo ? [
+        {
+          utxo: vmStateUtxo,
+          charms: { '$00': currentVmState },
+        },
+      ] : undefined,
+      // Collateral UTXO goes in ins
       ins: [
         {
           utxo: params.collateralUtxo,
@@ -326,17 +388,22 @@ export class VaultService {
         },
       ],
       outs: [
-        // Output 1: Vault NFT with state
+        // Output 1: Updated VaultManagerState
+        {
+          address: config.addresses.outputAddress,
+          charms: { '$00': updatedVmState },
+        },
+        // Output 2: Vault NFT with state
         {
           address: params.ownerAddress,
           charms: { '$00': vaultState },
         },
-        // Output 2: Minted zkUSD tokens
+        // Output 3: Minted zkUSD tokens
         {
           address: params.ownerAddress,
           charms: { '$01': safeToNumber(params.debt, 'debt') },
         },
-        // Output 3: Change (remaining BTC after collateral)
+        // Output 4: Change (remaining BTC after collateral)
         {
           address: params.ownerAddress,
           charms: {},

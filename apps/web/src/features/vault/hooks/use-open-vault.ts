@@ -181,15 +181,26 @@ export function useOpenVault() {
         setStatus('proving');
         toast.loading('Loading app binaries...', { id: 'vault-tx' });
 
-        // Get previous transaction hex for BOTH UTXOs
-        // The prover needs raw tx for all referenced UTXOs
-        const [collateralPrevTx, feePrevTx] = await Promise.all([
+        // Get deployment config for app binaries (needed for stateUtxo and WASM paths)
+        const config = await client.getDeploymentConfig();
+
+        // Get previous transaction hex for ALL UTXOs referenced in the spell
+        // The prover needs raw tx for: collateral, fee, AND VaultManagerState (refs)
+        const vmStateUtxo = config.contracts.vaultManager.stateUtxo;
+        const vmStateTxid = vmStateUtxo?.split(':')[0];
+
+        const prevTxPromises: Promise<string>[] = [
           client.getRawTransaction(collateralUtxo.txid),
           client.getRawTransaction(feeUtxo.txid),
-        ]);
+        ];
 
-        // Get deployment config for app binaries
-        const config = await client.getDeploymentConfig();
+        // Add vmState prevTx if available (required for OpenVault spell refs)
+        if (vmStateTxid) {
+          prevTxPromises.push(client.getRawTransaction(vmStateTxid));
+        }
+
+        const prevTxResults = await Promise.all(prevTxPromises);
+        const [collateralPrevTx, feePrevTx, vmStatePrevTx] = prevTxResults;
 
         // Validate WASM paths exist
         if (!config.contracts.vaultManager.wasmPath || !config.contracts.zkusdToken.wasmPath) {
@@ -220,15 +231,20 @@ export function useOpenVault() {
         const isDemoMode = client.isDemoMode();
 
         // Execute the spell through the prover
-        // - prev_txs: Include BOTH collateral and fee UTXO transactions
+        // - prev_txs: Include ALL UTXOs: collateral, fee, AND VaultManagerState (refs)
         // - funding_utxo: The FEE UTXO (DIFFERENT from collateral UTXO!)
+        const prevTxs = [collateralPrevTx, feePrevTx];
+        if (vmStatePrevTx) {
+          prevTxs.push(vmStatePrevTx);
+        }
+
         const proveResult = await client.executeSpell({
           spell,
           binaries: {
             [config.contracts.vaultManager.vk]: vmBinary,
             [config.contracts.zkusdToken.vk]: tokenBinary,
           },
-          prevTxs: [collateralPrevTx, feePrevTx], // Both raw txs
+          prevTxs, // All raw txs including VaultManagerState ref
           fundingUtxo: feeUtxoId, // Fee UTXO (DIFFERENT from collateral!)
           fundingUtxoValue: feeUtxo.value,
           changeAddress: address,
