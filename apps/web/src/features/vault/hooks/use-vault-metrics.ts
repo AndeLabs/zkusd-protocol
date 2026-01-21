@@ -11,6 +11,7 @@ interface VaultMetrics {
   healthStatus: 'safe' | 'warning' | 'danger';
   liquidationPrice: number;
   maxDebt: bigint;
+  maxWithdrawable: bigint;
   fee: bigint;
   totalDebt: bigint;
   isValid: boolean;
@@ -34,6 +35,7 @@ export function useVaultMetrics(
         healthStatus: 'safe',
         liquidationPrice: 0,
         maxDebt: 0n,
+        maxWithdrawable: 0n,
         fee: 0n,
         totalDebt: 0n,
         isValid: false,
@@ -76,6 +78,20 @@ export function useVaultMetrics(
         ? BigInt(Math.floor((Number(collateralSats) * btcPrice * 10000) / PROTOCOL.MCR))
         : 0n;
 
+    // Calculate max withdrawable collateral (how much BTC can be removed while staying above MCR)
+    // Formula: minCollateral = (debt * MCR) / (price * 10000)
+    // maxWithdrawable = currentCollateral - minCollateral
+    let maxWithdrawable = 0n;
+    if (totalDebt > 0n && collateralSats > 0n && btcPrice > 0) {
+      const minCollateralSats = BigInt(
+        Math.ceil((Number(totalDebt) * PROTOCOL.MCR) / (btcPrice * 10000))
+      );
+      maxWithdrawable = collateralSats > minCollateralSats ? collateralSats - minCollateralSats : 0n;
+    } else if (totalDebt === 0n && collateralSats > 0n) {
+      // No debt means all collateral can be withdrawn
+      maxWithdrawable = collateralSats;
+    }
+
     // Validation
     let validationError: string | null = null;
     let isValid = true;
@@ -97,6 +113,7 @@ export function useVaultMetrics(
       healthStatus,
       liquidationPrice,
       maxDebt,
+      maxWithdrawable,
       fee,
       totalDebt,
       isValid: isValid && debtRaw > 0n && collateralSats > 0n,

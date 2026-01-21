@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, ICRBadge, Input, Modal } from '@/components/ui';
+import { Button, ICRBadge, Input, MaxButton, Modal } from '@/components/ui';
 import { useAdjustVault, useVaultMetrics } from '@/features/vault';
 import { usePrice } from '@/hooks/use-price';
 import { PROTOCOL } from '@/lib/constants';
@@ -193,9 +193,21 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
 
         {/* Amount Input */}
         <div>
-          <label className="text-sm text-zinc-400 mb-2 block">
-            {mode === 'collateral' ? 'Amount (BTC)' : 'Amount (zkUSD)'}
-          </label>
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-sm text-zinc-400">
+              {mode === 'collateral' ? 'Amount (BTC)' : 'Amount (zkUSD)'}
+            </label>
+            {mode === 'collateral' && direction === 'remove' && currentMetrics.maxWithdrawable > 0n && (
+              <span className="text-xs text-zinc-500">
+                Max: {formatBTC(Number(currentMetrics.maxWithdrawable))}
+              </span>
+            )}
+            {mode === 'debt' && direction === 'add' && newMetrics.maxDebt > vault.debt && (
+              <span className="text-xs text-zinc-500">
+                Max additional: {formatZkUSD(newMetrics.maxDebt - vault.debt)}
+              </span>
+            )}
+          </div>
           <Input
             type="number"
             placeholder="0.00"
@@ -204,6 +216,24 @@ export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalPro
             value={amountInput}
             onChange={(e) => setAmountInput(e.target.value)}
             error={validationError || undefined}
+            rightElement={
+              mode === 'collateral' && direction === 'remove' && currentMetrics.maxWithdrawable > 0n ? (
+                <MaxButton
+                  onClick={() =>
+                    setAmountInput((Number(currentMetrics.maxWithdrawable) / 1e8).toFixed(8))
+                  }
+                />
+              ) : mode === 'debt' && direction === 'add' && currentMetrics.maxDebt > vault.debt ? (
+                <MaxButton
+                  onClick={() => {
+                    const additionalDebt = currentMetrics.maxDebt - vault.debt;
+                    // Use 90% of max for safety margin
+                    const safeDebt = (additionalDebt * 90n) / 100n;
+                    setAmountInput((Number(safeDebt) / 1e8).toFixed(2));
+                  }}
+                />
+              ) : undefined
+            }
           />
           {amountRaw > 0n && priceData && mode === 'collateral' && (
             <p className="text-xs text-zinc-500 mt-1">
