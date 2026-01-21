@@ -1,7 +1,14 @@
 // Charms Prover Service
 // Based on: https://docs.charms.dev/guides/wallet-integration/transactions/prover-api/
+//
+// Features:
+// - Multi-endpoint support with automatic fallback
+// - Health checks for endpoint availability
+// - Progressive retry with exponential backoff
+// - Demo mode for UI testing
 
 import type { Network } from '@zkusd/types';
+import { getProverEndpoints, type ProverEndpoint } from '@zkusd/config';
 
 // ============================================================================
 // Types
@@ -48,30 +55,40 @@ export interface ProveResponse {
 }
 
 export interface ProverConfig {
+  /** Override the default prover endpoints */
+  endpoints?: ProverEndpoint[];
+  /** Single API URL (for backwards compatibility - will be converted to endpoint) */
   apiUrl?: string;
+  /** Request timeout in milliseconds */
   timeout?: number;
+  /** Number of retries per endpoint */
   retries?: number;
+  /** Delay between retries in milliseconds */
   retryDelayMs?: number;
-  demoMode?: boolean; // Enable demo mode (simulated responses, no actual proving)
+  /** Enable demo mode (simulated responses, no actual proving) */
+  demoMode?: boolean;
+  /** Enable verbose logging */
+  verbose?: boolean;
 }
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const PROVER_URLS: Record<Network, string> = {
-  mainnet: 'https://v8.charms.dev/spells/prove',
-  testnet4: 'https://v8.charms.dev/spells/prove',
-  signet: 'https://v8.charms.dev/spells/prove',
-  regtest: 'http://localhost:17784/spells/prove',
+// Fallback URLs if config package doesn't provide endpoints
+const FALLBACK_PROVER_URLS: Record<Network, string[]> = {
+  mainnet: ['https://v8.charms.dev/spells/prove'],
+  testnet4: ['https://v8.charms.dev/spells/prove'],
+  signet: ['https://v8.charms.dev/spells/prove'],
+  regtest: ['http://localhost:17784/spells/prove'],
 };
 
-const DEFAULT_CONFIG: Required<ProverConfig> = {
-  apiUrl: PROVER_URLS.testnet4,
+const DEFAULT_CONFIG = {
   timeout: 300_000,      // 5 minutes - proving can be slow
   retries: 3,
   retryDelayMs: 5_000,
   demoMode: false,
+  verbose: false,
 };
 
 // Retry delays for server errors (progressive backoff)
@@ -82,33 +99,63 @@ const RETRY_DELAYS = [3_000, 10_000, 15_000, 20_000, 25_000, 30_000];
 // ============================================================================
 
 export class ProverService {
-  private config: Required<ProverConfig>;
+  private endpoints: ProverEndpoint[];
   private network: Network;
   private isDemoMode: boolean;
+  private timeout: number;
+  private retries: number;
+  private retryDelayMs: number;
+  private verbose: boolean;
+
+  // Track endpoint health for smart routing
+  private endpointHealth: Map<string, { failures: number; lastFailure?: Date }> = new Map();
 
   constructor(network: Network, config: ProverConfig = {}) {
     this.network = network;
-    // Demo mode only enabled explicitly via config
-    // The public Charms prover supports both mainnet and testnet4
-    this.isDemoMode = config.demoMode ?? false;
+    this.isDemoMode = config.demoMode ?? DEFAULT_CONFIG.demoMode;
+    this.timeout = config.timeout ?? DEFAULT_CONFIG.timeout;
+    this.retries = config.retries ?? DEFAULT_CONFIG.retries;
+    this.retryDelayMs = config.retryDelayMs ?? DEFAULT_CONFIG.retryDelayMs;
+    this.verbose = config.verbose ?? DEFAULT_CONFIG.verbose;
 
-    // Build config carefully - don't let undefined values overwrite defaults
-    const apiUrl = config.apiUrl ?? PROVER_URLS[network] ?? DEFAULT_CONFIG.apiUrl;
+    // Get endpoints from config or use provided overrides
+    if (config.endpoints && config.endpoints.length > 0) {
+      this.endpoints = config.endpoints;
+    } else if (config.apiUrl) {
+      // Backwards compatibility: convert single URL to endpoint
+      this.endpoints = [{ url: config.apiUrl, priority: 1 }];
+    } else {
+      // Try to get from config package, fall back to hardcoded
+      try {
+        const networkId = network === 'mainnet' ? 'mainnet' : 'testnet4';
+        this.endpoints = getProverEndpoints(networkId);
+      } catch {
+        // Config package not available, use fallback
+        const urls = FALLBACK_PROVER_URLS[network] || FALLBACK_PROVER_URLS.testnet4;
+        this.endpoints = urls.map((url, i) => ({ url, priority: i + 1 }));
+      }
+    }
 
-    this.config = {
-      ...DEFAULT_CONFIG,
-      apiUrl,
-      demoMode: this.isDemoMode,
-      timeout: config.timeout ?? DEFAULT_CONFIG.timeout,
-      retries: config.retries ?? DEFAULT_CONFIG.retries,
-      retryDelayMs: config.retryDelayMs ?? DEFAULT_CONFIG.retryDelayMs,
-    };
+    // Initialize endpoint health tracking
+    for (const endpoint of this.endpoints) {
+      this.endpointHealth.set(endpoint.url, { failures: 0 });
+    }
 
-    console.log(`[ProverService] Initialized for ${network} with URL: ${this.config.apiUrl}`);
+    this.log(`Initialized for ${network} with ${this.endpoints.length} endpoint(s)`);
+    if (this.verbose) {
+      this.endpoints.forEach((e, i) => this.log(`  Endpoint ${i + 1}: ${e.url}`));
+    }
 
     if (this.isDemoMode) {
       console.warn(`[ProverService] Running in DEMO MODE for ${network}. Transactions will be simulated.`);
     }
+  }
+
+  /**
+   * Log message if verbose mode is enabled
+   */
+  private log(message: string): void {
+    console.log(`[ProverService] ${message}`);
   }
 
   /**
@@ -119,7 +166,41 @@ export class ProverService {
   }
 
   /**
+   * Get endpoints sorted by health (healthy endpoints first)
+   */
+  private getSortedEndpoints(): ProverEndpoint[] {
+    return [...this.endpoints].sort((a, b) => {
+      const healthA = this.endpointHealth.get(a.url) || { failures: 0 };
+      const healthB = this.endpointHealth.get(b.url) || { failures: 0 };
+
+      // Sort by failures first (less failures = better), then by priority
+      if (healthA.failures !== healthB.failures) {
+        return healthA.failures - healthB.failures;
+      }
+      return a.priority - b.priority;
+    });
+  }
+
+  /**
+   * Record endpoint failure for health tracking
+   */
+  private recordFailure(endpointUrl: string): void {
+    const health = this.endpointHealth.get(endpointUrl) || { failures: 0 };
+    health.failures++;
+    health.lastFailure = new Date();
+    this.endpointHealth.set(endpointUrl, health);
+  }
+
+  /**
+   * Record endpoint success (reset failure count)
+   */
+  private recordSuccess(endpointUrl: string): void {
+    this.endpointHealth.set(endpointUrl, { failures: 0 });
+  }
+
+  /**
    * Prove a spell and get signed commit/spell transactions
+   * Tries multiple endpoints with automatic fallback
    */
   async prove(request: ProveRequest): Promise<ProveResponse> {
     // In demo mode, return simulated transactions
@@ -155,65 +236,80 @@ export class ProverService {
       chain: 'bitcoin', // Required by Charms API
     };
 
-    console.log('[ProverService] Sending request to:', this.config.apiUrl);
-    console.log('[ProverService] Network:', this.network);
-    console.log('[ProverService] Funding UTXO:', request.funding_utxo);
-    console.log('[ProverService] Change address:', request.change_address);
+    this.log(`Network: ${this.network}`);
+    this.log(`Funding UTXO: ${request.funding_utxo}`);
+    this.log(`Change address: ${request.change_address}`);
 
     const body = JSON.stringify(requestBody);
+    const sortedEndpoints = this.getSortedEndpoints();
 
     let lastError: Error | null = null;
-    let attempt = 0;
 
-    while (attempt < this.config.retries) {
-      try {
-        const response = await this.fetchWithTimeout(body);
+    // Try each endpoint
+    for (const endpoint of sortedEndpoints) {
+      this.log(`Trying endpoint: ${endpoint.url}`);
 
-        if (!response.ok) {
-          const errorText = await response.text();
+      let attempt = 0;
+      while (attempt < this.retries) {
+        try {
+          const response = await this.fetchWithTimeout(endpoint.url, body);
 
-          // Don't retry on 4xx errors (client errors)
-          if (response.status >= 400 && response.status < 500) {
+          if (!response.ok) {
+            const errorText = await response.text();
+
+            // Don't retry on 4xx errors (client errors) - these are our fault
+            if (response.status >= 400 && response.status < 500) {
+              throw new ProverError(
+                `Prover request failed: ${response.status} ${errorText}`,
+                'CLIENT_ERROR',
+                response.status
+              );
+            }
+
+            // 5xx errors - retry or try next endpoint
             throw new ProverError(
-              `Prover request failed: ${response.status} ${errorText}`,
-              'CLIENT_ERROR',
+              `Prover server error: ${response.status} ${errorText}`,
+              'SERVER_ERROR',
               response.status
             );
           }
 
-          // Retry on 5xx errors
-          throw new ProverError(
-            `Prover server error: ${response.status} ${errorText}`,
-            'SERVER_ERROR',
-            response.status
-          );
-        }
+          const result = await response.json();
+          const parsed = this.parseResponse(result);
 
-        const result = await response.json();
-        return this.parseResponse(result);
+          // Success! Record it and return
+          this.recordSuccess(endpoint.url);
+          return parsed;
 
-      } catch (error) {
-        lastError = error as Error;
+        } catch (error) {
+          lastError = error as Error;
 
-        // Don't retry on client errors or invalid responses
-        if (error instanceof ProverError &&
-            (error.code === 'CLIENT_ERROR' ||
-             error.code === 'INVALID_RESPONSE' ||
-             error.code === 'INVALID_REQUEST')) {
-          throw error;
-        }
+          // Don't retry or try other endpoints on client errors
+          if (error instanceof ProverError &&
+              (error.code === 'CLIENT_ERROR' ||
+               error.code === 'INVALID_RESPONSE' ||
+               error.code === 'INVALID_REQUEST')) {
+            throw error;
+          }
 
-        attempt++;
-        if (attempt < this.config.retries) {
-          const delay = RETRY_DELAYS[attempt - 1] || this.config.retryDelayMs;
-          console.log(`Prover request failed, retrying in ${delay}ms (attempt ${attempt}/${this.config.retries})`);
-          await this.sleep(delay);
+          attempt++;
+          if (attempt < this.retries) {
+            const delay = RETRY_DELAYS[attempt - 1] || this.retryDelayMs;
+            this.log(`Request failed, retrying in ${delay}ms (attempt ${attempt}/${this.retries})`);
+            await this.sleep(delay);
+          }
         }
       }
+
+      // All retries failed for this endpoint
+      this.recordFailure(endpoint.url);
+      this.log(`Endpoint ${endpoint.url} failed after ${this.retries} attempts`);
     }
 
+    // All endpoints failed
+    const endpointCount = this.endpoints.length;
     throw new ProverError(
-      `Prover request failed after ${this.config.retries} attempts: ${lastError?.message}`,
+      `All ${endpointCount} prover endpoint(s) failed. Last error: ${lastError?.message}`,
       'MAX_RETRIES_EXCEEDED'
     );
   }
@@ -311,12 +407,12 @@ export class ProverService {
   // Private helpers
   // ============================================================================
 
-  private async fetchWithTimeout(body: string): Promise<Response> {
+  private async fetchWithTimeout(url: string, body: string): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.config.timeout);
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      return await fetch(this.config.apiUrl, {
+      return await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,7 +422,7 @@ export class ProverService {
         signal: controller.signal,
       });
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
     }
   }
 

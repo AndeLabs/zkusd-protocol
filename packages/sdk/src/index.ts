@@ -6,6 +6,20 @@ export { OracleService } from './oracle';
 export { StabilityPoolService } from './stability-pool';
 export { SpellBuilder } from './spell-builder';
 
+// Error handling
+export {
+  ZkUsdError,
+  type ZkUsdErrorCode,
+  type ZkUsdErrorDetails,
+  createVaultError,
+  createNetworkError,
+  createWalletError,
+  createAmountError,
+  wrapError,
+  createLogger,
+  type Logger,
+} from './errors';
+
 // Services
 export {
   BitcoinApiService,

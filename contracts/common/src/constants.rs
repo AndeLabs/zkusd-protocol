@@ -2,6 +2,17 @@
 //!
 //! All magic numbers and configuration values for zkUSD protocol.
 //! These values are carefully chosen based on Liquity's battle-tested parameters.
+//!
+//! # Network Configuration
+//!
+//! Use feature flags to compile for different networks:
+//! - `mainnet` - Production values (higher minimums, proper gas compensation)
+//! - Default (no feature) - Testnet values (lower minimums for testing)
+//!
+//! ```toml
+//! # For mainnet deployment:
+//! zkusd-common = { path = "...", features = ["mainnet"] }
+//! ```
 
 /// Token Metadata
 pub mod token {
@@ -76,21 +87,35 @@ pub mod fees {
 }
 
 /// Debt Limits
+///
+/// Values differ between mainnet and testnet to allow easier testing.
 pub mod limits {
     use super::token::ONE;
 
     /// Minimum debt to open a vault
-    /// TESTNET: 10 zkUSD (reduced for easier testing with limited faucet BTC)
-    /// MAINNET: Should be 2,000 zkUSD for liquidation profitability
+    /// - Mainnet: 2,000 zkUSD (ensures liquidation profitability)
+    /// - Testnet: 10 zkUSD (allows testing with faucet BTC)
+    #[cfg(feature = "mainnet")]
+    pub const MIN_DEBT: u64 = 2_000 * ONE;
+    #[cfg(not(feature = "mainnet"))]
     pub const MIN_DEBT: u64 = 10 * ONE;
 
     /// Liquidation reserve - gas compensation for liquidators
-    /// TESTNET: 2 zkUSD (reduced proportionally)
-    /// MAINNET: Should be 200 zkUSD
+    /// - Mainnet: 200 zkUSD (covers real gas costs)
+    /// - Testnet: 2 zkUSD (reduced for testing)
+    #[cfg(feature = "mainnet")]
+    pub const LIQUIDATION_RESERVE: u64 = 200 * ONE;
+    #[cfg(not(feature = "mainnet"))]
     pub const LIQUIDATION_RESERVE: u64 = 2 * ONE;
 
     /// Maximum debt per vault (prevents concentration risk)
     pub const MAX_DEBT_PER_VAULT: u64 = 10_000_000 * ONE; // 10M zkUSD
+
+    /// Helper to check if running in mainnet mode
+    #[cfg(feature = "mainnet")]
+    pub const IS_MAINNET: bool = true;
+    #[cfg(not(feature = "mainnet"))]
+    pub const IS_MAINNET: bool = false;
 }
 
 /// Oracle Configuration
@@ -111,8 +136,11 @@ pub mod stability_pool {
     pub const SCALE_FACTOR: u128 = 1_000_000_000_000_000_000; // 1e18
 
     /// Minimum deposit to earn rewards
-    /// TESTNET: 1 zkUSD (reduced for testing)
-    /// MAINNET: Should be 100 zkUSD
+    /// - Mainnet: 100 zkUSD (meaningful participation)
+    /// - Testnet: 1 zkUSD (allows testing with small amounts)
+    #[cfg(feature = "mainnet")]
+    pub const MIN_DEPOSIT: u64 = 100 * super::token::ONE;
+    #[cfg(not(feature = "mainnet"))]
     pub const MIN_DEPOSIT: u64 = 1 * super::token::ONE;
 }
 
@@ -170,13 +198,19 @@ pub mod gas_pool {
     use super::token::ONE;
 
     /// Gas compensation per liquidation
-    /// TESTNET: 2 zkUSD (reduced for testing)
-    /// MAINNET: Should be 200 zkUSD
+    /// - Mainnet: 200 zkUSD (covers real gas costs + incentive)
+    /// - Testnet: 2 zkUSD (reduced for testing)
+    #[cfg(feature = "mainnet")]
+    pub const GAS_COMPENSATION: u64 = 200 * ONE;
+    #[cfg(not(feature = "mainnet"))]
     pub const GAS_COMPENSATION: u64 = 2 * ONE;
 
     /// Gas buffer added to each vault at opening
-    /// TESTNET: 2 zkUSD (reduced for testing)
-    /// MAINNET: Should be 200 zkUSD
+    /// - Mainnet: 200 zkUSD (matches gas compensation)
+    /// - Testnet: 2 zkUSD (reduced for testing)
+    #[cfg(feature = "mainnet")]
+    pub const VAULT_GAS_BUFFER: u64 = 200 * ONE;
+    #[cfg(not(feature = "mainnet"))]
     pub const VAULT_GAS_BUFFER: u64 = 2 * ONE;
 }
 

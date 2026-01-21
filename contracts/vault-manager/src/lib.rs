@@ -82,8 +82,8 @@ impl VaultManagerState {
     /// * `active_pool` - Address for holding active collateral
     /// * `default_pool` - Address for holding liquidated collateral
     ///
-    /// # Panics
-    /// Panics if active_pool or default_pool are zero addresses.
+    /// # Errors
+    /// Returns `ZkUsdError::InvalidAddress` if active_pool or default_pool are zero addresses.
     pub fn new(
         admin: Address,
         zkusd_token_id: AppId,
@@ -91,19 +91,27 @@ impl VaultManagerState {
         price_oracle_id: AppId,
         active_pool: Address,
         default_pool: Address,
-    ) -> Self {
+    ) -> ZkUsdResult<Self> {
         // Validate that pool addresses are not zero
-        assert!(active_pool != [0u8; 32], "active_pool cannot be zero address");
-        assert!(default_pool != [0u8; 32], "default_pool cannot be zero address");
+        if active_pool == [0u8; 32] {
+            return Err(ZkUsdError::InvalidAddress {
+                reason: "active_pool cannot be zero address"
+            });
+        }
+        if default_pool == [0u8; 32] {
+            return Err(ZkUsdError::InvalidAddress {
+                reason: "default_pool cannot be zero address"
+            });
+        }
 
-        Self {
+        Ok(Self {
             protocol: ProtocolState::new(admin),
             zkusd_token_id,
             stability_pool_id,
             price_oracle_id,
             active_pool,
             default_pool,
-        }
+        })
     }
 }
 
@@ -1093,7 +1101,9 @@ fn validate_transfer_insurance(
 
     // 3. Cannot transfer to zero address
     if *new_owner == [0u8; 32] {
-        return Err(ZkUsdError::InvalidAddress);
+        return Err(ZkUsdError::InvalidAddress {
+            reason: "cannot transfer insurance to zero address"
+        });
     }
 
     // 4. Insurance charms are only transferable with vault ownership

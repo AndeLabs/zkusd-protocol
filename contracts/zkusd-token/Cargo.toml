@@ -7,6 +7,8 @@ license.workspace = true
 [features]
 default = []
 charms = ["charms-sdk", "charms-data"]
+# Network features - propagate to zkusd-common
+mainnet = ["zkusd-common/mainnet"]
 
 [dependencies]
 zkusd-common = { workspace = true }

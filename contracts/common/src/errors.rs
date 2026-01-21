@@ -220,7 +220,10 @@ pub enum ZkUsdError {
     InvalidInsuranceParams,
 
     /// Invalid address (e.g., zero address)
-    InvalidAddress,
+    InvalidAddress {
+        /// Description of why the address is invalid
+        reason: &'static str,
+    },
 }
 
 /// Reasons for amount-related errors
@@ -315,7 +318,7 @@ impl ZkUsdError {
             Self::NoInsurance { .. } => "E131_NO_INSURANCE",
             Self::InsuranceNotTriggerable { .. } => "E132_INS_NOT_TRIGGERABLE",
             Self::InvalidInsuranceParams => "E133_INVALID_INS_PARAMS",
-            Self::InvalidAddress => "E134_INVALID_ADDRESS",
+            Self::InvalidAddress { .. } => "E134_INVALID_ADDRESS",
         }
     }
 
