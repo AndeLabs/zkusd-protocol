@@ -54,6 +54,29 @@ const MCR_BPS = 11_000;
 // ============================================================================
 
 /**
+ * Convert a hex string to a byte array.
+ * Required because Charms/Rust expects [u8; 32] arrays, not hex strings.
+ *
+ * @param hex - Hex string (with or without 0x prefix)
+ * @param expectedLength - Expected byte length (default 32)
+ * @returns Array of numbers (0-255)
+ */
+function hexToBytes(hex: string, expectedLength = 32): number[] {
+  // Remove 0x prefix if present
+  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+
+  // Pad or truncate to expected length
+  const paddedHex = cleanHex.padStart(expectedLength * 2, '0').slice(0, expectedLength * 2);
+
+  const bytes: number[] = [];
+  for (let i = 0; i < paddedHex.length; i += 2) {
+    bytes.push(parseInt(paddedHex.slice(i, i + 2), 16));
+  }
+
+  return bytes;
+}
+
+/**
  * Safely convert bigint to number, throwing if precision would be lost.
  * JavaScript's Number.MAX_SAFE_INTEGER is 9,007,199,254,740,991 (2^53 - 1).
  */
@@ -252,9 +275,10 @@ export class VaultService {
     const tokenAppRef = config.contracts.zkusdToken.appRef.replace('n/', 't/');
 
     // Build vault state matching Rust struct format
+    // CRITICAL: Rust expects [u8; 32] byte arrays, NOT hex strings!
     const vaultState = {
-      id: vaultId,
-      owner: params.ownerPubkey,
+      id: hexToBytes(vaultId, 32),           // VaultId = [u8; 32]
+      owner: hexToBytes(params.ownerPubkey, 32), // Address = [u8; 32]
       collateral: safeToNumber(params.collateral, 'collateral'),
       debt: safeToNumber(totalDebt, 'debt'),
       created_at: currentBlock,
@@ -356,13 +380,14 @@ export class VaultService {
     const newDebt = params.vaultState.debt + debtDelta;
 
     // Build inputs
+    // CRITICAL: Rust expects [u8; 32] byte arrays for id and owner
     const inputs: SpellInput[] = [
       {
         utxo: params.vaultUtxo,
         charms: {
           '$00': {
-            id: params.vaultState.id,
-            owner: params.vaultState.owner,
+            id: hexToBytes(params.vaultState.id, 32),
+            owner: hexToBytes(params.vaultState.owner, 32),
             collateral: safeToNumber(params.vaultState.collateral, 'vaultState.collateral'),
             debt: safeToNumber(params.vaultState.debt, 'vaultState.debt'),
             created_at: params.vaultState.createdAt,
@@ -397,14 +422,15 @@ export class VaultService {
     }
 
     // Build outputs
+    // CRITICAL: Rust expects [u8; 32] byte arrays for id and owner
     const outputs: SpellOutput[] = [
       // Output 1: Updated Vault NFT
       {
         address: params.ownerAddress,
         charms: {
           '$00': {
-            id: params.vaultState.id,
-            owner: params.vaultState.owner,
+            id: hexToBytes(params.vaultState.id, 32),
+            owner: hexToBytes(params.vaultState.owner, 32),
             collateral: safeToNumber(newCollateral, 'newCollateral'),
             debt: safeToNumber(newDebt, 'newDebt'),
             created_at: params.vaultState.createdAt,
@@ -494,12 +520,13 @@ export class VaultService {
       },
       ins: [
         // Input 1: Vault NFT to close
+        // CRITICAL: Rust expects [u8; 32] byte arrays for id and owner
         {
           utxo: params.vaultUtxo,
           charms: {
             '$00': {
-              id: params.vaultState.id,
-              owner: params.vaultState.owner,
+              id: hexToBytes(params.vaultState.id, 32),
+              owner: hexToBytes(params.vaultState.owner, 32),
               collateral: safeToNumber(params.vaultState.collateral, 'vaultState.collateral'),
               debt: safeToNumber(params.vaultState.debt, 'vaultState.debt'),
               created_at: params.vaultState.createdAt,
