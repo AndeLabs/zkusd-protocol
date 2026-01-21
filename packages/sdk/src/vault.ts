@@ -40,8 +40,8 @@ const DEFAULT_BASE_RATE_BPS = 50;
 /** Fee floor added to base rate (0.5% = 50 bps) */
 const FEE_FLOOR_BPS = 50;
 
-/** Vault status: Active */
-const VAULT_STATUS_ACTIVE = 0;
+/** Vault status: Active (Rust enum serializes as string) */
+const VAULT_STATUS_ACTIVE = 'Active';
 
 /** Basis points denominator */
 const BPS_DENOMINATOR = 10_000n;
@@ -300,12 +300,21 @@ export class VaultService {
         '$00': vmAppRef,
         '$01': tokenAppRef,
       },
-      // Private inputs with operation code (matches generate-spell.sh format)
+      // Private inputs with VaultWitness struct (ALL fields must be present for serde)
       private_inputs: {
         '$00': {
           op: OPEN_VAULT_OP,
+          vault_id: null,  // Not needed for OpenVault
           collateral: safeToNumber(params.collateral, 'collateral'),
           debt: safeToNumber(params.debt, 'debt'),
+          // Advanced operation fields (must be present as null)
+          flash_purpose: null,
+          rescuer_discount: null,
+          coverage: null,
+          premium: null,
+          trigger_icr: null,
+          insurance_id: null,
+          new_owner: null,
         },
       },
       // Collateral UTXO goes in ins (NOT empty!)
@@ -392,7 +401,7 @@ export class VaultService {
             debt: safeToNumber(params.vaultState.debt, 'vaultState.debt'),
             created_at: params.vaultState.createdAt,
             last_updated: params.vaultState.lastUpdated,
-            status: 0,
+            status: 'Active',
             interest_rate_bps: params.vaultState.interestRateBps,
             accrued_interest: safeToNumber(params.vaultState.accruedInterest, 'accruedInterest'),
             redistributed_debt: safeToNumber(params.vaultState.redistributedDebt, 'redistributedDebt'),
@@ -435,7 +444,7 @@ export class VaultService {
             debt: safeToNumber(newDebt, 'newDebt'),
             created_at: params.vaultState.createdAt,
             last_updated: currentBlock,
-            status: 0,
+            status: 'Active',
             interest_rate_bps: params.vaultState.interestRateBps,
             accrued_interest: safeToNumber(params.vaultState.accruedInterest, 'accruedInterest'),
             redistributed_debt: safeToNumber(params.vaultState.redistributedDebt, 'redistributedDebt'),
@@ -531,7 +540,7 @@ export class VaultService {
               debt: safeToNumber(params.vaultState.debt, 'vaultState.debt'),
               created_at: params.vaultState.createdAt,
               last_updated: params.vaultState.lastUpdated,
-              status: 0,
+              status: 'Active',
               interest_rate_bps: params.vaultState.interestRateBps,
               accrued_interest: safeToNumber(params.vaultState.accruedInterest, 'accruedInterest'),
               redistributed_debt: safeToNumber(params.vaultState.redistributedDebt, 'redistributedDebt'),
