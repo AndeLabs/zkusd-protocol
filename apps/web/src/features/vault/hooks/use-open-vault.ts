@@ -40,11 +40,14 @@ export async function checkNeedsSplit(
   const utxos = await client.getAddressUtxos(address);
   const confirmedUtxos = utxos.filter((u) => u.status?.confirmed);
 
-  if (confirmedUtxos.length === 0) {
+  // Use all UTXOs (including mempool) if no confirmed ones available
+  const availableUtxos = confirmedUtxos.length > 0 ? confirmedUtxos : utxos;
+
+  if (availableUtxos.length === 0) {
     return { needsSplit: false, utxoCount: 0, largestUtxo: 0 };
   }
 
-  const sortedUtxos = [...confirmedUtxos].sort((a, b) => b.value - a.value);
+  const sortedUtxos = [...availableUtxos].sort((a, b) => b.value - a.value);
   const largestUtxo = sortedUtxos[0].value;
 
   // Check if we can find two separate UTXOs
@@ -53,7 +56,7 @@ export async function checkNeedsSplit(
 
   return {
     needsSplit: !collateralUtxo || !feeUtxo,
-    utxoCount: confirmedUtxos.length,
+    utxoCount: availableUtxos.length,
     largestUtxo,
   };
 }
@@ -84,8 +87,17 @@ export function useOpenVault() {
         const utxos = await client.getAddressUtxos(address);
         const confirmedUtxos = utxos.filter((u) => u.status?.confirmed);
 
-        if (confirmedUtxos.length === 0) {
-          throw new Error('No confirmed UTXOs available');
+        // Also consider mempool (unconfirmed) UTXOs if no confirmed ones available
+        // Mempool UTXOs are riskier but acceptable for testnet
+        const availableUtxos = confirmedUtxos.length > 0 ? confirmedUtxos : utxos;
+
+        if (availableUtxos.length === 0) {
+          throw new Error('No UTXOs available. Please fund your wallet first.');
+        }
+
+        if (confirmedUtxos.length === 0 && utxos.length > 0) {
+          console.log('[OpenVault] Using unconfirmed (mempool) UTXOs');
+          toast.info('Using unconfirmed UTXOs from mempool', { id: 'utxo-warning' });
         }
 
         // Get fee estimate for dynamic buffer calculation
@@ -103,7 +115,7 @@ export function useOpenVault() {
         const collateralAmount = Number(params.collateralSats);
 
         // Sort UTXOs by value descending
-        const sortedUtxos = [...confirmedUtxos].sort((a, b) => b.value - a.value);
+        const sortedUtxos = [...availableUtxos].sort((a, b) => b.value - a.value);
 
         // Strategy: Find two UTXOs that together cover collateral + fees
         // - Collateral UTXO: Should have at least collateral amount

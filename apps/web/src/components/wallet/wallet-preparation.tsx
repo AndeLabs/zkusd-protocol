@@ -47,21 +47,25 @@ export function WalletPreparation({ requiredCollateral, onReady, onSkip }: Walle
       const utxos = await client.getAddressUtxos(address);
       const confirmed = utxos.filter((u) => u.status?.confirmed);
 
-      if (confirmed.length === 0) {
+      // Use all UTXOs (including mempool) if no confirmed ones
+      const available = confirmed.length > 0 ? confirmed : utxos;
+
+      if (available.length === 0) {
         setStatus({
           isReady: false,
           utxoCount: 0,
           totalBalance: 0,
           largestUtxo: 0,
           needsPreparation: false,
-          reason: 'No confirmed UTXOs found. Please fund your wallet.',
+          reason: 'No UTXOs found. Please fund your wallet.',
         });
         return;
       }
 
-      const sorted = [...confirmed].sort((a, b) => b.value - a.value);
-      const totalBalance = confirmed.reduce((sum, u) => sum + u.value, 0);
+      const sorted = [...available].sort((a, b) => b.value - a.value);
+      const totalBalance = available.reduce((sum, u) => sum + u.value, 0);
       const largestUtxo = sorted[0].value;
+      const usingMempool = confirmed.length === 0 && utxos.length > 0;
 
       // Check if we have two suitable UTXOs
       const collateralUtxo = sorted.find((u) => u.value >= requiredCollateral);
@@ -70,10 +74,11 @@ export function WalletPreparation({ requiredCollateral, onReady, onSkip }: Walle
       if (collateralUtxo && feeUtxo) {
         setStatus({
           isReady: true,
-          utxoCount: confirmed.length,
+          utxoCount: available.length,
           totalBalance,
           largestUtxo,
           needsPreparation: false,
+          reason: usingMempool ? 'Using unconfirmed (mempool) UTXOs' : undefined,
         });
         return;
       }
@@ -82,14 +87,15 @@ export function WalletPreparation({ requiredCollateral, onReady, onSkip }: Walle
       const totalRequired = requiredCollateral + FEE_BUFFER + 10_000; // extra for split tx fee
       const canPrepare = largestUtxo >= totalRequired;
 
+      const mempoolNote = usingMempool ? ' (from mempool)' : '';
       setStatus({
         isReady: false,
-        utxoCount: confirmed.length,
+        utxoCount: available.length,
         totalBalance,
         largestUtxo,
         needsPreparation: canPrepare,
         reason: canPrepare
-          ? `Your wallet has ${confirmed.length} UTXO${confirmed.length > 1 ? 's' : ''}. Charms protocol requires 2 separate UTXOs for vault creation.`
+          ? `Your wallet has ${available.length} UTXO${available.length > 1 ? 's' : ''}${mempoolNote}. Charms protocol requires 2 separate UTXOs for vault creation.`
           : `Insufficient funds. Need at least ${formatBTC(totalRequired)} BTC in a single UTXO.`,
       });
     } catch (error) {
@@ -354,20 +360,23 @@ export function useWalletPreparation(requiredCollateral: number) {
       const utxos = await client.getAddressUtxos(address);
       const confirmed = utxos.filter((u) => u.status?.confirmed);
 
-      if (confirmed.length === 0) {
+      // Use all UTXOs (including mempool) if no confirmed ones
+      const available = confirmed.length > 0 ? confirmed : utxos;
+
+      if (available.length === 0) {
         setStatus({
           isReady: false,
           utxoCount: 0,
           totalBalance: 0,
           largestUtxo: 0,
           needsPreparation: false,
-          reason: 'No confirmed UTXOs',
+          reason: 'No UTXOs available',
         });
         return;
       }
 
-      const sorted = [...confirmed].sort((a, b) => b.value - a.value);
-      const totalBalance = confirmed.reduce((sum, u) => sum + u.value, 0);
+      const sorted = [...available].sort((a, b) => b.value - a.value);
+      const totalBalance = available.reduce((sum, u) => sum + u.value, 0);
       const largestUtxo = sorted[0].value;
 
       const collateralUtxo = sorted.find((u) => u.value >= requiredCollateral);
@@ -378,7 +387,7 @@ export function useWalletPreparation(requiredCollateral: number) {
 
       setStatus({
         isReady,
-        utxoCount: confirmed.length,
+        utxoCount: available.length,
         totalBalance,
         largestUtxo,
         needsPreparation: !isReady && largestUtxo >= totalRequired,
