@@ -247,18 +247,19 @@ export class VaultService {
    *
    * Creates a Charms spell that:
    * 1. References the current VaultManagerState (for validation)
-   * 2. Takes BTC from collateralUtxo as collateral (in spell inputs)
-   * 3. Outputs updated VaultManagerState with incremented counters
-   * 4. Mints a Vault NFT with the vault state
-   * 5. Mints zkUSD tokens to the owner
-   * 6. Returns change to the owner
+   * 2. References the PriceOracle state (for BTC price)
+   * 3. Takes BTC from collateralUtxo as collateral (in spell inputs)
+   * 4. Outputs updated VaultManagerState with incremented counters
+   * 5. Mints a Vault NFT with the vault state
+   * 6. Mints zkUSD tokens to the owner
+   * 7. Returns change to the owner
    *
    * IMPORTANT: Charms requires:
-   * - refs: Current VaultManagerState UTXO (read but not spent)
+   * - refs: Current VaultManagerState + PriceOracle UTXOs (read but not spent)
    * - collateralUtxo: Goes in spell's `ins` array (the UTXO being "enchanted")
    * - feeUtxo: Passed to prover as `funding_utxo` (MUST be different!)
    *
-   * @param params - Vault parameters including collateral, debt, and owner info
+   * @param params - Vault parameters including collateral, debt, owner info, and btcPrice
    * @returns Spell object ready for proving
    */
   async buildOpenVaultSpell(params: OpenVaultParams & {
@@ -267,6 +268,7 @@ export class VaultService {
     ownerPubkey: string;
     currentBlock?: number;
     interestRateBps?: number;
+    btcPrice?: number;  // Current BTC price in USD with 8 decimals
   }): Promise<Spell> {
     const config = await this.client.getDeploymentConfig();
     const currentBlock = params.currentBlock ?? await this.client.getBlockHeight();
@@ -361,19 +363,59 @@ export class VaultService {
     // Get VaultManager state UTXO from deployment config
     const vmStateUtxo = config.contracts.vaultManager.stateUtxo;
 
+    // Get PriceOracle state UTXO and app ref from deployment config
+    const oracleStateUtxo = config.contracts.priceOracle.stateUtxo;
+    const oracleAppRef = config.contracts.priceOracle.appRef;
+
+    // Build OracleState for the price oracle ref
+    // The contract's extract_btc_price looks for OracleStateMinimal or PriceData in refs
+    const btcPrice = params.btcPrice ?? 9000000000000; // Default to $90,000 if not provided
+    const oracleState = {
+      price: {
+        price: btcPrice,
+        timestamp_block: currentBlock,
+        source: 'Mock',  // PriceSource enum
+        confidence: 100,
+      },
+      operator: adminBytes,
+      admin: adminBytes,
+      is_active: true,
+      last_valid_price: btcPrice,
+    };
+
     // Debug logging
     console.log('[VaultService] Building OpenVault spell');
     console.log('[VaultService] vmAppRef:', vmAppRef);
     console.log('[VaultService] tokenAppRef:', tokenAppRef);
+    console.log('[VaultService] oracleAppRef:', oracleAppRef);
     console.log('[VaultService] vmStateUtxo:', vmStateUtxo);
+    console.log('[VaultService] oracleStateUtxo:', oracleStateUtxo);
     console.log('[VaultService] collateralUtxo:', params.collateralUtxo);
     console.log('[VaultService] vaultDebt:', vaultDebt.toString());
+    console.log('[VaultService] btcPrice:', btcPrice);
+
+    // Build refs array with VaultManagerState AND PriceOracle
+    const refs: Array<{ utxo: string; charms: Record<string, unknown> }> = [];
+    if (vmStateUtxo) {
+      refs.push({
+        utxo: vmStateUtxo,
+        charms: { '$00': currentVmState },
+      });
+    }
+    if (oracleStateUtxo) {
+      // Add price oracle as a separate ref (uses its own app ref '$02')
+      refs.push({
+        utxo: oracleStateUtxo,
+        charms: { '$02': oracleState },  // $02 = oracle app
+      });
+    }
 
     const spell: Spell = {
       version: SPELL_VERSION,
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,
+        '$02': oracleAppRef,  // Add oracle app
       },
       // Private inputs with VaultWitness struct (ALL fields must be present for serde)
       // CRITICAL: vault_id MUST be provided so extract_vaults can find the new vault in outputs!
@@ -393,13 +435,8 @@ export class VaultService {
           new_owner: null,
         },
       },
-      // Reference the current VaultManagerState UTXO (read but not spent)
-      refs: vmStateUtxo ? [
-        {
-          utxo: vmStateUtxo,
-          charms: { '$00': currentVmState },
-        },
-      ] : undefined,
+      // Reference UTXOs: VaultManagerState + PriceOracle (read but not spent)
+      refs: refs.length > 0 ? refs : undefined,
       // Collateral UTXO goes in ins
       ins: [
         {

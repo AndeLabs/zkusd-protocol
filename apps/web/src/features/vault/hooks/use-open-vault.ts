@@ -167,6 +167,10 @@ export function useOpenVault() {
         // Get current block height
         const currentBlock = await client.getBlockHeight();
 
+        // Get current BTC price for ICR validation
+        const priceData = await client.oracle.getPrice();
+        const btcPrice = Number(priceData.price); // Price in USD with 8 decimals (converted to number)
+
         // Build the spell with collateral UTXO in ins
         const spell = await client.vault.buildOpenVaultSpell({
           collateral: params.collateralSats,
@@ -176,6 +180,7 @@ export function useOpenVault() {
           ownerAddress: address,
           ownerPubkey: publicKey,
           currentBlock,
+          btcPrice, // BTC price for ICR validation
         });
 
         setStatus('proving');
@@ -185,9 +190,11 @@ export function useOpenVault() {
         const config = await client.getDeploymentConfig();
 
         // Get previous transaction hex for ALL UTXOs referenced in the spell
-        // The prover needs raw tx for: collateral, fee, AND VaultManagerState (refs)
+        // The prover needs raw tx for: collateral, fee, VaultManagerState, AND PriceOracle (refs)
         const vmStateUtxo = config.contracts.vaultManager.stateUtxo;
         const vmStateTxid = vmStateUtxo?.split(':')[0];
+        const oracleStateUtxo = config.contracts.priceOracle.stateUtxo;
+        const oracleStateTxid = oracleStateUtxo?.split(':')[0];
 
         const prevTxPromises: Promise<string>[] = [
           client.getRawTransaction(collateralUtxo.txid),
@@ -199,11 +206,16 @@ export function useOpenVault() {
           prevTxPromises.push(client.getRawTransaction(vmStateTxid));
         }
 
+        // Add oracleState prevTx if available (required for BTC price in refs)
+        if (oracleStateTxid) {
+          prevTxPromises.push(client.getRawTransaction(oracleStateTxid));
+        }
+
         const prevTxResults = await Promise.all(prevTxPromises);
-        const [collateralPrevTx, feePrevTx, vmStatePrevTx] = prevTxResults;
+        const [collateralPrevTx, feePrevTx, vmStatePrevTx, oracleStatePrevTx] = prevTxResults;
 
         // Validate WASM paths exist
-        if (!config.contracts.vaultManager.wasmPath || !config.contracts.zkusdToken.wasmPath) {
+        if (!config.contracts.vaultManager.wasmPath || !config.contracts.zkusdToken.wasmPath || !config.contracts.priceOracle.wasmPath) {
           throw new Error('WASM binary paths not configured for this network');
         }
 
@@ -220,9 +232,10 @@ export function useOpenVault() {
           return btoa(binary);
         };
 
-        const [vmBinary, tokenBinary] = await Promise.all([
+        const [vmBinary, tokenBinary, oracleBinary] = await Promise.all([
           loadBinary(config.contracts.vaultManager.wasmPath),
           loadBinary(config.contracts.zkusdToken.wasmPath),
+          loadBinary(config.contracts.priceOracle.wasmPath),
         ]);
 
         toast.loading('Generating zero-knowledge proof...', { id: 'vault-tx' });
@@ -231,11 +244,14 @@ export function useOpenVault() {
         const isDemoMode = client.isDemoMode();
 
         // Execute the spell through the prover
-        // - prev_txs: Include ALL UTXOs: collateral, fee, AND VaultManagerState (refs)
+        // - prev_txs: Include ALL UTXOs: collateral, fee, VaultManagerState, AND PriceOracle (refs)
         // - funding_utxo: The FEE UTXO (DIFFERENT from collateral UTXO!)
         const prevTxs = [collateralPrevTx, feePrevTx];
         if (vmStatePrevTx) {
           prevTxs.push(vmStatePrevTx);
+        }
+        if (oracleStatePrevTx) {
+          prevTxs.push(oracleStatePrevTx);
         }
 
         const proveResult = await client.executeSpell({
@@ -243,8 +259,9 @@ export function useOpenVault() {
           binaries: {
             [config.contracts.vaultManager.vk]: vmBinary,
             [config.contracts.zkusdToken.vk]: tokenBinary,
+            [config.contracts.priceOracle.vk]: oracleBinary,
           },
-          prevTxs, // All raw txs including VaultManagerState ref
+          prevTxs, // All raw txs including VaultManagerState and PriceOracle refs
           fundingUtxo: feeUtxoId, // Fee UTXO (DIFFERENT from collateral!)
           fundingUtxoValue: feeUtxo.value,
           changeAddress: address,
