@@ -249,6 +249,13 @@ export class ProverService {
     this.log(`Change address: ${request.change_address}`);
 
     const body = JSON.stringify(requestBody);
+
+    // Debug: Log the spell structure being sent
+    console.log('[ProverService] Spell structure:', JSON.stringify(transformedSpell, null, 2));
+    console.log('[ProverService] Has refs:', !!transformedSpell.refs, 'refs count:', transformedSpell.refs?.length ?? 0);
+    console.log('[ProverService] Inputs count:', transformedSpell.ins?.length ?? 0);
+    console.log('[ProverService] Outputs count:', transformedSpell.outs?.length ?? 0);
+
     const sortedEndpoints = this.getSortedEndpoints();
 
     let lastError: Error | null = null;

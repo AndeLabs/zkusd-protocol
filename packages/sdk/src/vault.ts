@@ -361,6 +361,14 @@ export class VaultService {
     // Get VaultManager state UTXO from deployment config
     const vmStateUtxo = config.contracts.vaultManager.stateUtxo;
 
+    // Debug logging
+    console.log('[VaultService] Building OpenVault spell');
+    console.log('[VaultService] vmAppRef:', vmAppRef);
+    console.log('[VaultService] tokenAppRef:', tokenAppRef);
+    console.log('[VaultService] vmStateUtxo:', vmStateUtxo);
+    console.log('[VaultService] collateralUtxo:', params.collateralUtxo);
+    console.log('[VaultService] vaultDebt:', vaultDebt.toString());
+
     const spell: Spell = {
       version: SPELL_VERSION,
       apps: {
@@ -368,10 +376,11 @@ export class VaultService {
         '$01': tokenAppRef,
       },
       // Private inputs with VaultWitness struct (ALL fields must be present for serde)
+      // CRITICAL: vault_id MUST be provided so extract_vaults can find the new vault in outputs!
       private_inputs: {
         '$00': {
           op: OPEN_VAULT_OP,
-          vault_id: null,  // Not needed for OpenVault
+          vault_id: hexToBytes(vaultId, 32),  // Required for extract_vaults to find output vault
           collateral: safeToNumber(params.collateral, 'collateral'),
           debt: safeToNumber(params.debt, 'debt'),
           // Advanced operation fields (must be present as null)
