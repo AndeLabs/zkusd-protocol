@@ -18,6 +18,11 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import * as bitcoin from 'bitcoinjs-lib';
+import * as ecc from 'tiny-secp256k1';
+
+// Initialize elliptic curve library
+bitcoin.initEccLib(ecc);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,18 +66,20 @@ interface DeploymentPlan {
     utxo: Utxo;
     appId: string;
     vk: string;
+    fundingUtxo: Utxo;
   };
   vaultManager: {
     utxo: Utxo;
     appId: string;
     vk: string;
+    fundingUtxo: Utxo;
   };
   stabilityPool: {
     utxo: Utxo;
     appId: string;
     vk: string;
+    fundingUtxo: Utxo;
   };
-  fundingUtxo: Utxo;
 }
 
 // ============================================================================
@@ -131,6 +138,157 @@ async function broadcastTx(txHex: string): Promise<string> {
     throw new Error(`Broadcast failed: ${error}`);
   }
   return response.text();
+}
+
+// ============================================================================
+// PSBT Signing
+// ============================================================================
+
+// Testnet4 network configuration
+const TESTNET4_NETWORK: bitcoin.Network = {
+  messagePrefix: '\x18Bitcoin Signed Message:\n',
+  bech32: 'tb',
+  bip32: {
+    public: 0x043587cf,
+    private: 0x04358394,
+  },
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
+};
+
+async function signTransaction(
+  txHex: string,
+  wallet: WalletConfig,
+  prevTxsCache: Map<string, string>
+): Promise<string> {
+  // Check if it's a PSBT (starts with 'psbt' magic bytes in base64 or hex)
+  const isPsbt = txHex.startsWith('70736274') || txHex.startsWith('cHNidP');
+
+  if (isPsbt) {
+    // Handle PSBT format
+    let psbt: bitcoin.Psbt;
+    try {
+      if (txHex.startsWith('cHNidP')) {
+        psbt = bitcoin.Psbt.fromBase64(txHex, { network: TESTNET4_NETWORK });
+      } else {
+        psbt = bitcoin.Psbt.fromHex(txHex, { network: TESTNET4_NETWORK });
+      }
+    } catch (err) {
+      throw new Error(`Failed to parse PSBT: ${err}`);
+    }
+
+    const privateKeyBuffer = Buffer.from(wallet.private_key_hex, 'hex');
+    const keyPair = {
+      publicKey: Buffer.from(wallet.public_key, 'hex'),
+      privateKey: privateKeyBuffer,
+      sign: (hash: Buffer): Buffer => Buffer.from(ecc.sign(hash, privateKeyBuffer)),
+    };
+
+    for (let i = 0; i < psbt.inputCount; i++) {
+      try {
+        psbt.signInput(i, keyPair);
+      } catch {
+        // Ignore inputs we can't sign
+      }
+    }
+
+    psbt.finalizeAllInputs();
+    return psbt.extractTransaction().toHex();
+  }
+
+  // Handle raw transaction format (from Charms prover)
+  log('Converting raw transaction to PSBT for signing...');
+  const tx = bitcoin.Transaction.fromHex(txHex);
+
+  // Check which inputs have existing witness data (from Charms prover)
+  const inputsWithWitness: number[] = [];
+  const existingWitness: Buffer[][] = [];
+  for (let i = 0; i < tx.ins.length; i++) {
+    const input = tx.ins[i];
+    const hasWitness = input.witness.length > 0 && input.witness.some(w => w.length > 0);
+    if (hasWitness) {
+      inputsWithWitness.push(i);
+      existingWitness[i] = input.witness;
+    }
+  }
+
+  log(`Inputs with existing witness: ${inputsWithWitness.join(', ') || 'none'}`);
+
+  // Build PSBT for sighash calculation (need ALL inputs and outputs)
+  const psbt = new bitcoin.Psbt({ network: TESTNET4_NETWORK });
+
+  // Add all inputs
+  for (let i = 0; i < tx.ins.length; i++) {
+    const input = tx.ins[i];
+    const inputTxid = Buffer.from(input.hash).reverse().toString('hex');
+    const inputVout = input.index;
+
+    let prevTxHex = prevTxsCache.get(inputTxid);
+    if (!prevTxHex) {
+      log(`Fetching previous tx ${inputTxid.slice(0, 16)}...`);
+      prevTxHex = await fetchText(`${MEMPOOL_API}/tx/${inputTxid}/hex`);
+      prevTxsCache.set(inputTxid, prevTxHex);
+    }
+
+    const prevTx = bitcoin.Transaction.fromHex(prevTxHex);
+    const prevOutput = prevTx.outs[inputVout];
+
+    psbt.addInput({
+      hash: input.hash,
+      index: input.index,
+      sequence: input.sequence,
+      witnessUtxo: {
+        script: prevOutput.script,
+        value: BigInt(prevOutput.value),
+      },
+    });
+  }
+
+  // Add all outputs
+  for (const output of tx.outs) {
+    psbt.addOutput({
+      script: output.script,
+      value: BigInt(output.value),
+    });
+  }
+
+  // Sign inputs that don't have existing witness (P2WPKH inputs we own)
+  const privateKeyBuffer = Buffer.from(wallet.private_key_hex, 'hex');
+  const keyPair = {
+    publicKey: Buffer.from(wallet.public_key, 'hex'),
+    privateKey: privateKeyBuffer,
+    sign: (hash: Buffer): Buffer => Buffer.from(ecc.sign(hash, privateKeyBuffer)),
+  };
+
+  for (let i = 0; i < tx.ins.length; i++) {
+    if (!inputsWithWitness.includes(i)) {
+      try {
+        psbt.signInput(i, keyPair);
+        log(`Signed input ${i}`);
+      } catch (err) {
+        log(`Warning: Could not sign input ${i}: ${err}`);
+      }
+    }
+  }
+
+  // Extract signatures from PSBT and build final transaction
+  const finalTx = tx.clone();
+
+  for (let i = 0; i < tx.ins.length; i++) {
+    if (inputsWithWitness.includes(i)) {
+      // Keep existing witness from Charms prover
+      finalTx.ins[i].witness = existingWitness[i];
+    } else {
+      // Use signature from PSBT
+      const partialSig = psbt.data.inputs[i].partialSig;
+      if (partialSig && partialSig.length > 0) {
+        finalTx.ins[i].witness = [partialSig[0].signature, partialSig[0].pubkey];
+      }
+    }
+  }
+
+  return finalTx.toHex();
 }
 
 // ============================================================================
@@ -394,12 +552,15 @@ async function deployContract(
     return null;
   }
 
-  // Fetch prev_txs
+  // Fetch prev_txs and build cache for signing
   log('Fetching previous transactions...');
+  const prevTxsCache = new Map<string, string>();
   const [utxoPrevTx, fundingPrevTx] = await Promise.all([
     fetchRawTx(utxo.txid),
     fetchRawTx(fundingUtxo.txid),
   ]);
+  prevTxsCache.set(utxo.txid, utxoPrevTx);
+  prevTxsCache.set(fundingUtxo.txid, fundingPrevTx);
 
   // Prove spell
   const { commitTx, spellTx } = await proveSpell(
@@ -413,21 +574,32 @@ async function deployContract(
   log(`Commit TX size: ${commitTx.length / 2} bytes`);
   log(`Spell TX size: ${spellTx.length / 2} bytes`);
 
-  // Save transactions
-  fs.writeFileSync(`/tmp/zkusd-${name}-commit.hex`, commitTx);
-  fs.writeFileSync(`/tmp/zkusd-${name}-spell.hex`, spellTx);
-  log('Transactions saved to /tmp/');
+  // Save unsigned transactions
+  fs.writeFileSync(`/tmp/zkusd-${name}-commit-unsigned.hex`, commitTx);
+  fs.writeFileSync(`/tmp/zkusd-${name}-spell-unsigned.hex`, spellTx);
+  log('Unsigned transactions saved to /tmp/');
+
+  // Sign transactions (handles both PSBT and raw tx formats)
+  log('Signing commit transaction...');
+  const signedCommitTx = await signTransaction(commitTx, wallet, prevTxsCache);
+  log('Signing spell transaction...');
+  const signedSpellTx = await signTransaction(spellTx, wallet, prevTxsCache);
+
+  // Save signed transactions
+  fs.writeFileSync(`/tmp/zkusd-${name}-commit-signed.hex`, signedCommitTx);
+  fs.writeFileSync(`/tmp/zkusd-${name}-spell-signed.hex`, signedSpellTx);
+  log('Signed transactions saved to /tmp/');
 
   // Broadcast
   log('Broadcasting commit transaction...');
-  const commitTxId = await broadcastTx(commitTx);
+  const commitTxId = await broadcastTx(signedCommitTx);
   log(`Commit TX ID: ${commitTxId}`);
 
   log('Waiting 10s for propagation...');
   await new Promise(r => setTimeout(r, 10000));
 
   log('Broadcasting spell transaction...');
-  const spellTxId = await broadcastTx(spellTx);
+  const spellTxId = await broadcastTx(signedSpellTx);
   log(`Spell TX ID: ${spellTxId}`);
 
   log(`\n✓ ${name} deployed successfully!`);
@@ -444,10 +616,19 @@ async function deployContract(
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
+  const allowUnconfirmed = args.includes('--allow-unconfirmed');
+  const useTxidIdx = args.findIndex(a => a === '--use-txid');
+  const useTxid = useTxidIdx >= 0 ? args[useTxidIdx + 1] : undefined;
   const contractFilter = args.find((_, i, arr) => arr[i - 1] === '--contract');
 
   log('zkUSD Contract Deployment Script');
   log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE DEPLOYMENT'}`);
+  if (allowUnconfirmed) {
+    log('WARNING: Using unconfirmed UTXOs (--allow-unconfirmed)');
+  }
+  if (useTxid) {
+    log(`Using UTXOs from specific txid: ${useTxid.slice(0, 16)}...`);
+  }
   if (contractFilter) {
     log(`Deploying only: ${contractFilter}`);
   }
@@ -473,23 +654,46 @@ async function main() {
   // Fetch UTXOs
   log('\nFetching UTXOs...');
   const allUtxos = await fetchUtxos(wallet.address);
-  const utxos = allUtxos
-    .filter(u => u.status.confirmed && u.value >= 547)
+  let utxos = allUtxos
+    .filter(u => (allowUnconfirmed || u.status.confirmed) && u.value >= 547)
     .sort((a, b) => b.value - a.value);
 
-  log(`Found ${utxos.length} usable UTXOs`);
+  log(`Found ${utxos.length} usable UTXOs total`);
 
-  // Need at least 4 UTXOs: 3 for contracts + 1 for funding
-  if (utxos.length < 4) {
-    throw new Error('Need at least 4 UTXOs for deployment (3 contracts + 1 funding)');
+  // If --use-txid is specified, only use UTXOs from that transaction
+  if (useTxid) {
+    const txidUtxos = utxos.filter(u => u.txid === useTxid);
+    if (txidUtxos.length < 6) {
+      throw new Error(`Need at least 6 UTXOs from txid ${useTxid.slice(0,16)}..., found ${txidUtxos.length}`);
+    }
+    // Sort by vout to get predictable order: 0,1,2 are funding (50k), 3,4,5 are genesis (547)
+    utxos = txidUtxos.sort((a, b) => a.vout - b.vout);
+    log(`Using ${utxos.length} UTXOs from specified txid`);
+  } else if (utxos.length < 6) {
+    throw new Error('Need at least 6 UTXOs for deployment (3 contracts + 3 funding). Run faucet or split UTXOs.');
   }
 
-  // Select UTXOs
-  // Use largest for funding, next 3 for contracts
-  const fundingUtxo = utxos[0];
-  const tokenUtxo = utxos[1];
-  const spUtxo = utxos[2];
-  const vmUtxo = utxos[3];
+  // Select UTXOs based on whether we're using a specific txid
+  let tokenFundingUtxo: Utxo, spFundingUtxo: Utxo, vmFundingUtxo: Utxo;
+  let tokenUtxo: Utxo, spUtxo: Utxo, vmUtxo: Utxo;
+
+  if (useTxid) {
+    // From split-utxos.ts: vout 0,1,2 are 50k funding, vout 3,4,5 are 547 genesis
+    tokenFundingUtxo = utxos.find(u => u.vout === 0)!;
+    spFundingUtxo = utxos.find(u => u.vout === 1)!;
+    vmFundingUtxo = utxos.find(u => u.vout === 2)!;
+    tokenUtxo = utxos.find(u => u.vout === 3)!;
+    spUtxo = utxos.find(u => u.vout === 4)!;
+    vmUtxo = utxos.find(u => u.vout === 5)!;
+  } else {
+    // Use largest 3 for funding, next 3 for contract genesis
+    tokenFundingUtxo = utxos[0];
+    spFundingUtxo = utxos[1];
+    vmFundingUtxo = utxos[2];
+    tokenUtxo = utxos[3];
+    spUtxo = utxos[4];
+    vmUtxo = utxos[5];
+  }
 
   // Compute App IDs
   const plan: DeploymentPlan = {
@@ -497,25 +701,30 @@ async function main() {
       utxo: tokenUtxo,
       appId: computeAppId(tokenUtxo),
       vk: tokenVk,
+      fundingUtxo: tokenFundingUtxo,
     },
     vaultManager: {
       utxo: vmUtxo,
       appId: computeAppId(vmUtxo),
       vk: vmVk,
+      fundingUtxo: vmFundingUtxo,
     },
     stabilityPool: {
       utxo: spUtxo,
       appId: computeAppId(spUtxo),
       vk: spVk,
+      fundingUtxo: spFundingUtxo,
     },
-    fundingUtxo,
   };
 
   log('\nDeployment Plan:');
-  log(`  Funding UTXO: ${fundingUtxo.txid}:${fundingUtxo.vout} (${fundingUtxo.value} sats)`);
-  log(`  Token UTXO: ${tokenUtxo.txid}:${tokenUtxo.vout} -> App ID: ${plan.token.appId.slice(0, 16)}...`);
-  log(`  SP UTXO: ${spUtxo.txid}:${spUtxo.vout} -> App ID: ${plan.stabilityPool.appId.slice(0, 16)}...`);
-  log(`  VM UTXO: ${vmUtxo.txid}:${vmUtxo.vout} -> App ID: ${plan.vaultManager.appId.slice(0, 16)}...`);
+  log(`  Token: genesis=${tokenUtxo.txid.slice(0,8)}:${tokenUtxo.vout}, funding=${tokenFundingUtxo.txid.slice(0,8)}:${tokenFundingUtxo.vout} (${tokenFundingUtxo.value} sats)`);
+  log(`  SP: genesis=${spUtxo.txid.slice(0,8)}:${spUtxo.vout}, funding=${spFundingUtxo.txid.slice(0,8)}:${spFundingUtxo.vout} (${spFundingUtxo.value} sats)`);
+  log(`  VM: genesis=${vmUtxo.txid.slice(0,8)}:${vmUtxo.vout}, funding=${vmFundingUtxo.txid.slice(0,8)}:${vmFundingUtxo.vout} (${vmFundingUtxo.value} sats)`);
+  log(`\nPlanned App IDs:`);
+  log(`  Token: ${plan.token.appId}`);
+  log(`  SP: ${plan.stabilityPool.appId}`);
+  log(`  VM: ${plan.vaultManager.appId}`);
 
   // Generate spells
   log('\nGenerating spell files...');
@@ -532,7 +741,7 @@ async function main() {
       tokenSpell,
       path.join(WASM_DIR, 'zkusd-token-app.wasm'),
       plan.token.utxo,
-      fundingUtxo,
+      plan.token.fundingUtxo,
       wallet,
       dryRun
     );
@@ -545,7 +754,7 @@ async function main() {
       spSpell,
       path.join(WASM_DIR, 'zkusd-stability-pool-app.wasm'),
       plan.stabilityPool.utxo,
-      fundingUtxo,
+      plan.stabilityPool.fundingUtxo,
       wallet,
       dryRun
     );
@@ -558,7 +767,7 @@ async function main() {
       vmSpell,
       path.join(WASM_DIR, 'zkusd-vault-manager-app.wasm'),
       plan.vaultManager.utxo,
-      fundingUtxo,
+      plan.vaultManager.fundingUtxo,
       wallet,
       dryRun
     );
