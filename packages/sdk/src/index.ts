@@ -29,6 +29,21 @@ export {
   getBinaryService,
 } from './services';
 
+// Storage (client-side state management)
+export {
+  VaultStorage,
+  createVaultStorage,
+  UtxoVerifier,
+  createUtxoVerifier,
+} from './storage';
+
+export type {
+  TrackedVault,
+  VaultStorageData,
+  VerificationResult,
+  BatchVerificationResult,
+} from './storage';
+
 export type {
   Utxo,
   Transaction,

@@ -18,7 +18,7 @@ describe('VaultService Spell Builders', () => {
         collateral: 10000000n, // 0.1 BTC
         debt: 500000000000n, // 5000 zkUSD
         owner: 'tb1qtest123',
-        fundingUtxo: 'abc123def456789abc123def456789abc123def456789abc123def456789abcd:0',
+        collateralUtxo: 'abc123def456789abc123def456789abc123def456789abc123def456789abcd:0',
         ownerAddress: 'tb1qtest123',
         ownerPubkey: '02abc123def456789',
       });
@@ -60,7 +60,7 @@ describe('VaultService Spell Builders', () => {
         collateral: 50000000n, // 0.5 BTC
         debt: 1000000000000n, // 10000 zkUSD
         owner: 'tb1qowner',
-        fundingUtxo: 'txid123:1',
+        collateralUtxo: 'txid123:1',
         ownerAddress: 'tb1qowner',
         ownerPubkey: '03pubkey',
         interestRateBps: 150, // 1.5% APR

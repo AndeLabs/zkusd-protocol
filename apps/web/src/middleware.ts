@@ -74,8 +74,12 @@ function getSecurityHeaders(): Record<string, string> {
     // Permissions Policy (disable unnecessary features)
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
 
-    // HSTS (enable after confirming HTTPS works)
-    // 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    // HSTS - Force HTTPS for 1 year
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+
+    // Cross-Origin policies
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Resource-Policy': 'same-origin',
   };
 }
 
