@@ -3,10 +3,10 @@
   "charms_version": 8,
   "charms_sdk_version": "0.10.0",
   "deployment_date": "2026-01-21",
-  "last_updated": "2026-01-21",
+  "last_updated": "2026-01-22",
   "status": "deployed",
-  "phase": "hackathon_mvp_v3",
-  "note": "V3 REDEPLOYMENT - All contracts rebuilt with wasm32-wasip1 target (correct for Charms)",
+  "phase": "hackathon_mvp_v4",
+  "note": "V4 - VaultManager updated with btc_inputs fix for Charms v8 compatibility",
 
   "contracts": {
     "price_oracle": {
@@ -31,11 +31,11 @@
       "note": "V3 - Deployed 2026-01-21 with wasm32-wasip1 target"
     },
     "vault_manager": {
-      "vk": "833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f",
+      "vk": "3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0",
       "app_id": "ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9",
       "spell_tx": "aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02",
       "wasm": "apps/web/public/wasm/zkusd-vault-manager-app.wasm",
-      "note": "V3 - Deployed 2026-01-21 with wasm32-wasip1 target"
+      "note": "V4 - Updated 2026-01-22 with btc_inputs fix for Charms v8 compatibility"
     }
   },
 
@@ -49,7 +49,7 @@
     "token_nft": "n/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
     "token_fungible": "t/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
     "stability_pool": "n/001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b/98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9",
-    "vault_manager": "n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f"
+    "vault_manager": "n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0"
   },
 
   "app_id_bytes": {
@@ -64,7 +64,7 @@
     "_note": "VKs are used in app definitions (n/{app_id}/{vk})",
     "token": "ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128",
     "stability_pool": "98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9",
-    "vault_manager": "833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f",
+    "vault_manager": "3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0",
     "oracle": "98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d"
   },
 

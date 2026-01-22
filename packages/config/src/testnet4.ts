@@ -1,13 +1,13 @@
 // Testnet4 Deployment Configuration
 // Generated from deployments/testnet4/deployment-config.json
 //
-// STATUS: DEPLOYED - V3 deployment with wasm32-wasip1 target (correct for Charms)
-// All contracts redeployed 2026-01-21 with matching VKs
+// STATUS: V4 - Updated vault-manager with btc_inputs fix for Charms v8 compatibility
+// VaultManager updated 2026-01-22 with btc_inputs check fix
 //
-// Current WASM VKs (from compiled binaries) - ALL MATCH DEPLOYED:
+// Current WASM VKs (from compiled binaries):
 //   price-oracle:    98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d
 //   zkusd-token:     ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
-//   vault-manager:   833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f
+//   vault-manager:   3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0 (V4 - btc_inputs fix)
 //   stability-pool:  98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9
 
 import type { NetworkDeployment } from './networks';
@@ -15,11 +15,11 @@ import type { NetworkDeployment } from './networks';
 // Contracts are now deployed with matching VKs
 export const TESTNET4_NEEDS_REDEPLOYMENT = false;
 
-// VKs from current compiled WASM (now match deployed contracts)
+// VKs from current compiled WASM
 export const TESTNET4_VKS = {
   priceOracle: '98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d',
   zkusdToken: 'ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128',
-  vaultManager: '833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f',
+  vaultManager: '3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0', // V4 with btc_inputs fix
   stabilityPool: '98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9',
 };
 
@@ -52,8 +52,8 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
     },
     vaultManager: {
       appId: 'ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9',
-      vk: '833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f',
-      appRef: 'n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/833e8d5ec3f31d6cd0a9346d08d12916abd52c3c12ff8eb9f14ebeb265b3085f',
+      vk: '3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0', // V4 with btc_inputs fix
+      appRef: 'n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0',
       spellTx: 'aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02',
       stateUtxo: 'aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02:0',
       status: 'pending',
