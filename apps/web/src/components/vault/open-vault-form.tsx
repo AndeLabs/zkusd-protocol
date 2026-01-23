@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, ICRBadge, Input, MaxButton } from '@/components/ui';
-import { WalletPreparation } from '@/components/wallet/wallet-preparation';
+import { WalletPreparation, UtxoStatus } from '@/components/wallet';
 import { useOpenVault, useVaultMetrics } from '@/features/vault';
 import { usePrice } from '@/hooks/use-price';
 import { PROTOCOL } from '@/lib/constants';
@@ -13,7 +13,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 export function OpenVaultForm() {
   const { isConnected, balance, connect } = useWallet();
   const { data: priceData } = usePrice();
-  const { openVault, isLoading: isSubmitting, status, error: vaultError, reset } = useOpenVault();
+  const {
+    openVault,
+    isLoading: isSubmitting,
+    status,
+    error: vaultError,
+    errorType,
+    isWaiting,
+    statusMessage,
+    progress,
+    getTimeUntilAvailable,
+    reset,
+  } = useOpenVault();
 
   // Show preparation view instead of error
   const [showPreparation, setShowPreparation] = useState(false);
@@ -128,6 +139,18 @@ export function OpenVaultForm() {
   // Calculate USD values for display
   const collateralUSD = priceData ? (Number(collateralSats) / 1e8) * priceData.price : 0;
 
+  // Get button text based on state
+  const getButtonText = () => {
+    if (!isConnected) return 'Connect Wallet';
+    if (isWaiting) {
+      const timeLeft = getTimeUntilAvailable();
+      return timeLeft ? `Waiting (${timeLeft})` : 'Waiting...';
+    }
+    if (isSubmitting) return statusMessage || 'Processing...';
+    if (!metrics.isValid) return metrics.validationError || 'Enter Amounts';
+    return 'Open Vault';
+  };
+
   // Show wallet preparation if needed
   if (showPreparation && preparationCollateral > 0) {
     return (
@@ -189,7 +212,8 @@ export function OpenVaultForm() {
                 type="button"
                 onClick={handleSetMinDebt}
                 disabled={collateralSats === 0n}
-                className="text-xs font-medium text-zinc-400 hover:text-zinc-300 transition-colors disabled:opacity-50"
+                aria-label="Set minimum debt amount"
+                className="text-xs font-medium text-zinc-400 hover:text-zinc-300 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
               >
                 MIN
               </button>
@@ -244,12 +268,96 @@ export function OpenVaultForm() {
         </motion.div>
       )}
 
+      {/* Progress indicator when loading */}
+      {isSubmitting && progress > 0 && (
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-zinc-500">
+            <span>{statusMessage}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="w-full bg-zinc-800 rounded-full h-1.5">
+            <motion.div
+              className="bg-primary h-1.5 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Waiting state with countdown */}
+      {isWaiting && (
+        <motion.div
+          role="alert"
+          aria-live="polite"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl"
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-yellow-500 text-lg">⏱</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-yellow-500">UTXO Temporarily Reserved</p>
+              <p className="text-xs text-zinc-400 mt-1">
+                Your UTXO is reserved in the prover cache. It will become available in{' '}
+                <span className="font-medium text-yellow-500">
+                  {getTimeUntilAvailable() || '~1 hour'}
+                </span>
+                .
+              </p>
+              <p className="text-xs text-zinc-500 mt-2">
+                You can wait for it to expire, or get new BTC to try again.
+              </p>
+              <button
+                onClick={reset}
+                aria-label="Dismiss waiting message and try with different amounts"
+                className="mt-3 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              >
+                Dismiss and try with different amounts
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Error display for specific error types */}
+      {vaultError && !isWaiting && !vaultError.startsWith('UTXO_SPLIT_REQUIRED:') && (
+        <motion.div
+          role="alert"
+          aria-live="assertive"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl"
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-red-500 text-lg">!</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-500">
+                {errorType === 'user_rejected' ? 'Transaction Cancelled' : 'Error'}
+              </p>
+              <p className="text-xs text-zinc-400 mt-1">{vaultError}</p>
+              <button
+                onClick={reset}
+                aria-label="Dismiss error and try again"
+                className="mt-3 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Protocol Info */}
       <div className="text-xs text-zinc-500 space-y-1">
-        <p>• Minimum collateral ratio: {PROTOCOL.MCR / 100}%</p>
-        <p>• Minimum debt: {Number(PROTOCOL.MIN_DEBT) / 1e8} zkUSD</p>
-        <p>• Opening fee: 1% of borrowed amount</p>
+        <p>Minimum collateral ratio: {PROTOCOL.MCR / 100}%</p>
+        <p>Minimum debt: {Number(PROTOCOL.MIN_DEBT) / 1e8} zkUSD</p>
+        <p>Opening fee: 1% of borrowed amount</p>
       </div>
+
+      {/* UTXO Status - Show when connected */}
+      {isConnected && <UtxoStatus />}
 
       {/* Submit Button */}
       <Button
@@ -257,34 +365,10 @@ export function OpenVaultForm() {
         size="lg"
         onClick={handleSubmit}
         loading={isSubmitting}
-        disabled={isConnected && !metrics.isValid}
+        disabled={(isConnected && !metrics.isValid) || isWaiting}
       >
-        {!isConnected
-          ? 'Connect Wallet'
-          : isSubmitting
-            ? getStatusText(status)
-            : !metrics.isValid
-              ? metrics.validationError || 'Enter Amounts'
-              : 'Open Vault'}
+        {getButtonText()}
       </Button>
     </div>
   );
-}
-
-// Helper to get human-readable status text
-function getStatusText(status: string): string {
-  switch (status) {
-    case 'building_spell':
-      return 'Building transaction...';
-    case 'proving':
-      return 'Generating ZK proof...';
-    case 'signing':
-      return 'Sign in wallet...';
-    case 'broadcasting':
-      return 'Broadcasting...';
-    case 'confirming':
-      return 'Confirming...';
-    default:
-      return 'Processing...';
-  }
 }

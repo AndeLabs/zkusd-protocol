@@ -11,11 +11,14 @@ export function Header() {
   const { data: priceData, isLoading: priceLoading } = usePrice();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
-      <div className="container mx-auto px-4">
+    <header
+      role="banner"
+      className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md"
+    >
+      <nav aria-label="Main navigation" className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2 group" aria-label="zkUSD Home">
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -48,9 +51,9 @@ export function Header() {
           {/* Right: Wallet */}
           <div className="flex items-center gap-3">
             {/* Mobile price */}
-            <div className="md:hidden text-sm">
+            <div className="md:hidden text-sm" aria-label="BTC Price">
               {priceData && (
-                <span className="font-mono text-zinc-400">
+                <span className="font-mono text-zinc-400" title={`BTC Price: ${formatUSD(priceData.price)}`}>
                   ${Math.round(priceData.price).toLocaleString()}
                 </span>
               )}
@@ -59,7 +62,7 @@ export function Header() {
             <ConnectButton />
           </div>
         </div>
-      </div>
+      </nav>
     </header>
   );
 }

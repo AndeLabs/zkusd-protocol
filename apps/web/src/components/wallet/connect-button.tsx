@@ -54,7 +54,10 @@ export function ConnectButton() {
             e.stopPropagation();
             setShowMenu(!showMenu);
           }}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors"
+          aria-label={`Wallet menu: ${shortAddress}, Balance: ${isLoadingBalance ? 'loading' : formatBTC(balance)}`}
+          aria-expanded={showMenu}
+          aria-haspopup="menu"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
         >
           {/* Balance */}
           <span className="text-sm font-mono text-amber-400">
@@ -73,6 +76,7 @@ export function ConnectButton() {
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
@@ -82,6 +86,8 @@ export function ConnectButton() {
         <AnimatePresence>
           {showMenu && (
             <motion.div
+              role="menu"
+              aria-label="Wallet options"
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -94,32 +100,35 @@ export function ConnectButton() {
                 <p className="text-sm font-mono text-zinc-200 truncate">{address}</p>
               </div>
 
-              <div className="p-2">
+              <div className="p-2" role="group">
                 <button
+                  role="menuitem"
                   onClick={() => {
                     navigator.clipboard.writeText(address);
                     toast.success('Address copied to clipboard');
                     setShowMenu(false);
                   }}
-                  className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 rounded-md transition-colors"
+                  className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 rounded-md transition-colors focus-visible:outline-none focus-visible:bg-zinc-700"
                 >
                   Copy Address
                 </button>
                 <a
+                  role="menuitem"
                   href={`https://mempool.space/testnet4/address/${address}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 rounded-md transition-colors"
+                  className="block w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 rounded-md transition-colors focus-visible:outline-none focus-visible:bg-zinc-700"
                   onClick={() => setShowMenu(false)}
                 >
                   View on Explorer
                 </a>
                 <button
+                  role="menuitem"
                   onClick={() => {
                     disconnect();
                     setShowMenu(false);
                   }}
-                  className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-700 rounded-md transition-colors"
+                  className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-700 rounded-md transition-colors focus-visible:outline-none focus-visible:bg-zinc-700"
                 >
                   Disconnect
                 </button>

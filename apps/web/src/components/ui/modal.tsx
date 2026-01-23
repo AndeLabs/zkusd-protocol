@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface ModalProps {
@@ -32,22 +32,59 @@ export function Modal({
   size = 'md',
   closeOnOverlayClick = true,
 }: ModalProps) {
-  // Close on escape key
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  // Focus trap - keep focus within modal
+  const handleTabKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !modalRef.current) return;
+
+      const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement?.focus();
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement?.focus();
+      }
+    },
+    []
+  );
+
+  // Handle escape and focus trap
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      handleTabKey(e);
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
+      previousActiveElement.current = document.activeElement as HTMLElement;
+      document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
+
+      // Focus first focusable element in modal
+      setTimeout(() => {
+        const firstFocusable = modalRef.current?.querySelector<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        firstFocusable?.focus();
+      }, 50);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
+      // Restore focus to previous element
+      previousActiveElement.current?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, handleTabKey]);
 
   if (typeof window === 'undefined') return null;
 
@@ -67,12 +104,17 @@ export function Modal({
 
           {/* Modal Content */}
           <motion.div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? 'modal-title' : undefined}
+            aria-describedby={description ? 'modal-description' : undefined}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={cn(
-              'relative w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl',
+              'relative w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto',
               sizeClasses[size],
               className
             )}
@@ -96,8 +138,16 @@ export function Modal({
             {/* Header */}
             {(title || description) && (
               <div className="px-6 pt-6 pb-4">
-                {title && <h2 className="text-xl font-semibold text-white">{title}</h2>}
-                {description && <p className="text-sm text-zinc-400 mt-1">{description}</p>}
+                {title && (
+                  <h2 id="modal-title" className="text-xl font-semibold text-white">
+                    {title}
+                  </h2>
+                )}
+                {description && (
+                  <p id="modal-description" className="text-sm text-zinc-400 mt-1">
+                    {description}
+                  </p>
+                )}
               </div>
             )}
 

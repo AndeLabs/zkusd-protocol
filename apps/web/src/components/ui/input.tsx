@@ -13,6 +13,9 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, hint, rightElement, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s/g, '-');
+    const errorId = error ? `${inputId}-error` : undefined;
+    const hintId = hint && !error ? `${inputId}-hint` : undefined;
+    const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
 
     return (
       <div className="w-full">
@@ -25,6 +28,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={describedBy}
             className={cn(
               'w-full bg-zinc-800 border rounded-lg px-4 py-3 text-lg font-mono text-white placeholder:text-zinc-500',
               'focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500',
@@ -40,8 +45,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
           )}
         </div>
-        {error && <p className="mt-1.5 text-sm text-red-400">{error}</p>}
-        {hint && !error && <p className="mt-1.5 text-sm text-zinc-500">{hint}</p>}
+        {error && (
+          <p id={errorId} role="alert" className="mt-1.5 text-sm text-red-400">
+            {error}
+          </p>
+        )}
+        {hint && !error && (
+          <p id={hintId} className="mt-1.5 text-sm text-zinc-500">
+            {hint}
+          </p>
+        )}
       </div>
     );
   }
@@ -62,8 +75,9 @@ export function MaxButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label="Set maximum amount"
       className={cn(
-        'text-xs font-medium transition-colors',
+        'text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded',
         disabled ? 'text-zinc-600 cursor-not-allowed' : 'text-amber-400 hover:text-amber-300'
       )}
     >
