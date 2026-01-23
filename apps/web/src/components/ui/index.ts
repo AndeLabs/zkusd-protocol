@@ -15,4 +15,3 @@ export {
 } from './skeleton';
 export { Tooltip, type TooltipProps } from './tooltip';
 export { ErrorBoundary } from './error-boundary';
-export { DemoModeBanner } from './demo-mode-banner';
