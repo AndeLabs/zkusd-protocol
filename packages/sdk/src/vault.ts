@@ -367,20 +367,27 @@ export class VaultService {
     const oracleStateUtxo = config.contracts.priceOracle.stateUtxo;
     const oracleAppRef = config.contracts.priceOracle.appRef;
 
-    // Build OracleState for the price oracle ref
-    // The contract's extract_btc_price looks for OracleStateMinimal or PriceData in refs
+    // Build PriceData for the oracle ref
+    // The contract's extract_btc_price tries to deserialize PriceData first, then OracleStateMinimal
     const btcPrice = params.btcPrice ?? 9000000000000; // Default to $90,000 if not provided
-    const oracleState = {
-      price: {
-        price: btcPrice,
-        timestamp_block: currentBlock,
-        source: 'Mock',  // PriceSource enum
-        confidence: 100,
-      },
-      operator: adminBytes,
-      admin: adminBytes,
-      is_active: true,
-      last_valid_price: btcPrice,
+
+    // Try passing just PriceData directly (simpler format, extract_btc_price checks this first)
+    const priceData = {
+      price: btcPrice,
+      timestamp_block: currentBlock,
+      source: 'Mock',  // PriceSource enum - serde serializes unit variants as strings
+      confidence: 100,
+    };
+
+    // Get token state UTXO for the token state NFT ref (required by validate_fungible_with_state)
+    const tokenStateUtxo = config.contracts.zkusdToken.stateUtxo;
+    // Token NFT app ref (same identity as fungible but with 'n' tag)
+    const tokenNftAppRef = config.contracts.zkusdToken.appRef;  // Already 'n/...'
+
+    // Build token state for refs (ZkUsdTokenState)
+    const tokenState = {
+      authorized_minter: hexToBytes(config.contracts.vaultManager.appId, 32),  // VaultManager is authorized to mint
+      total_supply: 0,  // Initial supply
     };
 
     // Debug logging
@@ -390,11 +397,15 @@ export class VaultService {
     console.log('[VaultService] oracleAppRef:', oracleAppRef);
     console.log('[VaultService] vmStateUtxo:', vmStateUtxo);
     console.log('[VaultService] oracleStateUtxo:', oracleStateUtxo);
+    console.log('[VaultService] tokenStateUtxo:', tokenStateUtxo);
     console.log('[VaultService] collateralUtxo:', params.collateralUtxo);
     console.log('[VaultService] vaultDebt:', vaultDebt.toString());
     console.log('[VaultService] btcPrice:', btcPrice);
+    console.log('[VaultService] Using PriceData in refs for BTC price');
+    console.log('[VaultService] Adding token state NFT to refs for validate_fungible_with_state');
+    console.log('[VaultService] Adding updated token state NFT to outs (total_supply:', params.debt.toString(), ')');
+    console.log('[VaultService] Adding Token witness ($03) for mint operation');
 
-    // Build refs array with VaultManagerState AND PriceOracle
     const refs: Array<{ utxo: string; charms: Record<string, unknown> }> = [];
     if (vmStateUtxo) {
       refs.push({
@@ -403,10 +414,19 @@ export class VaultService {
       });
     }
     if (oracleStateUtxo) {
-      // Add price oracle as a separate ref (uses its own app ref '$02')
+      // Add price oracle as a separate ref with PriceData (simpler format)
+      // extract_btc_price tries PriceData first before OracleStateMinimal
       refs.push({
         utxo: oracleStateUtxo,
-        charms: { '$02': oracleState },  // $02 = oracle app
+        charms: { '$02': priceData },  // $02 = oracle app, using PriceData
+      });
+    }
+    if (tokenStateUtxo) {
+      // Add token state NFT to refs (required by validate_fungible_with_state)
+      // The fungible token validation checks if 'n' tag NFT with same identity exists
+      refs.push({
+        utxo: tokenStateUtxo,
+        charms: { '$03': tokenState },  // $03 = token NFT app
       });
     }
 
@@ -415,11 +435,18 @@ export class VaultService {
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,
-        '$02': oracleAppRef,  // Add oracle app
+        '$02': oracleAppRef,
+        '$03': tokenNftAppRef,  // Token state NFT (same identity as $01 but 'n' tag)
       },
-      // Private inputs with VaultWitness struct (ALL fields must be present for serde)
+      // Public inputs with PriceData for VaultManager to extract BTC price
+      // The contract's extract_btc_price checks x.value::<PriceData>() first
+      public_inputs: {
+        '$00': priceData,  // PriceData for VaultManager validation
+      },
+      // Private inputs with witness structs (ALL fields must be present for serde)
       // CRITICAL: vault_id MUST be provided so extract_vaults can find the new vault in outputs!
       private_inputs: {
+        // VaultManager witness for OpenVault operation
         '$00': {
           op: OPEN_VAULT_OP,
           vault_id: hexToBytes(vaultId, 32),  // Required for extract_vaults to find output vault
@@ -433,6 +460,14 @@ export class VaultService {
           trigger_icr: null,
           insurance_id: null,
           new_owner: null,
+        },
+        // Token state NFT witness for Mint operation (OP_MINT = 0x02)
+        // Required by zkusd-token's validate_token_operation when tag='n'
+        '$03': {
+          op: 2,  // OP_MINT
+          from: null,  // Not used for mint
+          to: hexToBytes(params.ownerPubkey, 32),  // Recipient of minted tokens
+          amount: safeToNumber(params.debt, 'debt'),  // Amount being minted
         },
       },
       // Reference UTXOs: VaultManagerState + PriceOracle (read but not spent)
@@ -455,12 +490,23 @@ export class VaultService {
           address: params.ownerAddress,
           charms: { '$00': vaultState },
         },
-        // Output 3: Minted zkUSD tokens
+        // Output 3: Minted zkUSD tokens (fungible)
         {
           address: params.ownerAddress,
           charms: { '$01': safeToNumber(params.debt, 'debt') },
         },
-        // Output 4: Change (remaining BTC after collateral)
+        // Output 4: Updated Token State NFT (required by validate_fungible_with_state)
+        // When minting tokens, total_supply must be updated
+        {
+          address: config.addresses.outputAddress,
+          charms: {
+            '$03': {
+              authorized_minter: hexToBytes(config.contracts.vaultManager.appId, 32),
+              total_supply: safeToNumber(params.debt, 'debt'),  // New supply = minted amount
+            },
+          },
+        },
+        // Output 5: Change (remaining BTC after collateral)
         {
           address: params.ownerAddress,
           charms: {},

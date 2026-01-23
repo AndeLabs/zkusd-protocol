@@ -12,7 +12,6 @@ export interface ZkUsdClientConfig {
   network: Network;
   charmsApiUrl?: string;
   bitcoinRpcUrl?: string;
-  demoMode?: boolean; // Enable demo mode for UI testing (simulates transactions)
 }
 
 const NETWORK_CONFIGS: Record<Network, NetworkConfig> = {
@@ -49,31 +48,21 @@ export class ZkUsdClient {
   readonly prover: ProverService;
 
   private deploymentConfig: DeploymentConfig | null = null;
-  private _isDemoMode: boolean;
 
   constructor(config: ZkUsdClientConfig) {
     this.network = config.network;
     this.networkConfig = NETWORK_CONFIGS[config.network];
-    this._isDemoMode = config.demoMode ?? false;
 
     // Initialize services
     this.bitcoin = new BitcoinApiService(config.network, config.bitcoinRpcUrl);
     this.prover = new ProverService(config.network, {
       apiUrl: config.charmsApiUrl,
-      demoMode: config.demoMode,
     });
 
     // Initialize domain services
     this.vault = new VaultService(this);
     this.oracle = new OracleService(this);
     this.stabilityPool = new StabilityPoolService(this);
-  }
-
-  /**
-   * Check if running in demo mode (simulated transactions)
-   */
-  isDemoMode(): boolean {
-    return this._isDemoMode || this.prover.isDemo();
   }
 
   /**
@@ -204,24 +193,6 @@ export class ZkUsdClient {
     // Get the prove result
     const proveResult = await this.executeSpell(options);
 
-    // Check if these are demo/simulated transactions
-    // Demo transactions are short and end with zeros
-    const isDemoTx = proveResult.commitTx.length < 150 ||
-                     proveResult.commitTx.endsWith('0000000000') ||
-                     this.prover.isDemo();
-
-    if (isDemoTx) {
-      console.warn('[ZkUsdClient] Demo mode: Skipping signing and using simulated txids');
-      // Generate deterministic fake txids from the transaction content
-      const commitTxId = this.hashString(proveResult.commitTx + 'commit').padStart(64, '0');
-      const spellTxId = this.hashString(proveResult.spellTx + 'spell').padStart(64, '0');
-
-      return {
-        commitTxId,
-        spellTxId,
-      };
-    }
-
     // Sign transactions if a signer is provided
     let commitTx = proveResult.commitTx;
     let spellTx = proveResult.spellTx;
@@ -244,19 +215,6 @@ export class ZkUsdClient {
       commitTxId,
       spellTxId,
     };
-  }
-
-  /**
-   * Simple hash for deterministic ID generation
-   */
-  private hashString(input: string): string {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16);
   }
 
   /**

@@ -5,7 +5,6 @@
 // - Multi-endpoint support with automatic fallback
 // - Health checks for endpoint availability
 // - Progressive retry with exponential backoff
-// - Demo mode for UI testing
 
 import type { Network } from '@zkusd/types';
 import { getProverEndpoints, type ProverEndpoint } from '@zkusd/config';
@@ -20,7 +19,8 @@ export interface Spell {
   refs?: SpellInput[];  // Reference inputs (read but not spent) - for protocol state
   ins: SpellInput[];
   outs: SpellOutput[];
-  private_inputs?: Record<string, unknown>;  // Witness data for spell execution
+  public_inputs?: Record<string, unknown>;  // Public inputs (recorded on-chain, e.g., PriceData)
+  private_inputs?: Record<string, unknown>;  // Witness data for spell execution (NOT recorded on-chain)
 }
 
 export interface SpellApp {
@@ -66,8 +66,6 @@ export interface ProverConfig {
   retries?: number;
   /** Delay between retries in milliseconds */
   retryDelayMs?: number;
-  /** Enable demo mode (simulated responses, no actual proving) */
-  demoMode?: boolean;
   /** Enable verbose logging */
   verbose?: boolean;
 }
@@ -88,7 +86,6 @@ const DEFAULT_CONFIG = {
   timeout: 300_000,      // 5 minutes - proving can be slow
   retries: 3,
   retryDelayMs: 5_000,
-  demoMode: false,
   verbose: false,
 };
 
@@ -102,7 +99,6 @@ const RETRY_DELAYS = [3_000, 10_000, 15_000, 20_000, 25_000, 30_000];
 export class ProverService {
   private endpoints: ProverEndpoint[];
   private network: Network;
-  private isDemoMode: boolean;
   private timeout: number;
   private retries: number;
   private retryDelayMs: number;
@@ -113,7 +109,6 @@ export class ProverService {
 
   constructor(network: Network, config: ProverConfig = {}) {
     this.network = network;
-    this.isDemoMode = config.demoMode ?? DEFAULT_CONFIG.demoMode;
     this.timeout = config.timeout ?? DEFAULT_CONFIG.timeout;
     this.retries = config.retries ?? DEFAULT_CONFIG.retries;
     this.retryDelayMs = config.retryDelayMs ?? DEFAULT_CONFIG.retryDelayMs;
@@ -146,10 +141,6 @@ export class ProverService {
     if (this.verbose) {
       this.endpoints.forEach((e, i) => this.log(`  Endpoint ${i + 1}: ${e.url}`));
     }
-
-    if (this.isDemoMode) {
-      console.warn(`[ProverService] Running in DEMO MODE for ${network}. Transactions will be simulated.`);
-    }
   }
 
   /**
@@ -157,13 +148,6 @@ export class ProverService {
    */
   private log(message: string): void {
     console.log(`[ProverService] ${message}`);
-  }
-
-  /**
-   * Check if running in demo mode
-   */
-  isDemo(): boolean {
-    return this.isDemoMode;
   }
 
   /**
@@ -204,11 +188,6 @@ export class ProverService {
    * Tries multiple endpoints with automatic fallback
    */
   async prove(request: ProveRequest): Promise<ProveResponse> {
-    // In demo mode, return simulated transactions
-    if (this.isDemoMode) {
-      return this.simulateProve(request);
-    }
-
     this.validateRequest(request);
 
     // Build request body with chain parameter
@@ -513,60 +492,6 @@ export class ProverService {
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Simulate a prove response for demo mode
-   * Creates deterministic fake transaction hex based on the request
-   */
-  private simulateProve(request: ProveRequest): ProveResponse {
-    // Create deterministic hashes based on request content
-    const seed = JSON.stringify(request.spell) + request.funding_utxo;
-    const hash1 = this.simpleHash(seed);
-    const hash2 = this.simpleHash(seed + 'spell');
-
-    // Generate fake transaction hex (looks realistic but is clearly demo)
-    // Format: version (4 bytes) + marker + flag + inputs + outputs + witness + locktime
-    const commitTxId = hash1.toString(16).padStart(64, '0');
-    const spellTxId = hash2.toString(16).padStart(64, '0');
-
-    // Build minimal valid-looking transaction hex
-    // 02000000 = version 2
-    // 0001 = segwit marker + flag
-    // 01 = 1 input
-    // [txid] = 32 bytes reversed
-    // 00000000 = vout
-    // 00 = empty scriptsig
-    // ffffffff = sequence
-    // 01 = 1 output
-    // [value] = 8 bytes little endian
-    // [scriptpubkey]
-    // 00 = empty witness
-    // 00000000 = locktime
-    const commitTx = `0200000001${commitTxId}00000000ffffffff0100000000000000000000000000`;
-    const spellTx = `0200000001${spellTxId}00000000ffffffff0100000000000000000000000000`;
-
-    console.warn('[ProverService DEMO] Simulated transactions generated');
-    console.warn('[ProverService DEMO] Commit TX:', commitTxId.slice(0, 16) + '...');
-    console.warn('[ProverService DEMO] Spell TX:', spellTxId.slice(0, 16) + '...');
-
-    return {
-      commitTx,
-      spellTx,
-    };
-  }
-
-  /**
-   * Simple hash function for deterministic ID generation
-   */
-  private simpleHash(input: string): number {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash);
   }
 }
 

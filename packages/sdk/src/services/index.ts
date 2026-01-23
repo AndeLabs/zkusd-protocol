@@ -17,3 +17,25 @@ export type {
 
 export { BinaryService, getBinaryService } from './binary';
 export type { BinaryConfig, BinaryCache } from './binary';
+
+// Deployment verification
+export { DeploymentVerifier, createVerifier } from './deployment-verifier';
+export type {
+  ContractVerification,
+  DeploymentVerification,
+  VerifierConfig,
+} from './deployment-verifier';
+
+// Error diagnostics
+export {
+  diagnoseError,
+  isVkMismatchError,
+  isRecoverableError,
+  formatErrorForUI,
+  preflightCheck,
+} from './error-diagnostics';
+export type {
+  ErrorCategory,
+  DiagnosedError,
+  PreflightResult,
+} from './error-diagnostics';
