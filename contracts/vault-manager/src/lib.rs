@@ -50,6 +50,12 @@ use zkusd_common::{
         ZkUsdCharmState, SpellFlashMint, FlashMintPurpose,
         validate_flash_mint_spell, calculate_flash_fee,
     },
+    // Charms v0.12 validation helpers
+    validation::{
+        require_positive, require_in_range, require_min_icr, require_sufficient_balance,
+        require_owner, require_tcr_not_worsened, verify_field_eq,
+    },
+    check,
 };
 
 // ============ Vault Manager State ============
@@ -222,66 +228,33 @@ fn validate_open_vault(
     collateral: u64,
     debt: u64,
 ) -> ZkUsdResult<()> {
-    // 1. Check minimum debt requirement
+    // 1. Check debt within allowed range (includes liquidation reserve)
     let total_debt = safe_add(debt, limits::LIQUIDATION_RESERVE)?;
-    if total_debt < limits::MIN_DEBT {
-        return Err(ZkUsdError::BelowMinimum {
-            amount: total_debt,
-            minimum: limits::MIN_DEBT,
-        });
-    }
-
-    // 1b. Check maximum debt per vault (prevents concentration risk)
-    if total_debt > limits::MAX_DEBT_PER_VAULT {
-        return Err(ZkUsdError::ExceedsMaximum {
-            amount: total_debt,
-            maximum: limits::MAX_DEBT_PER_VAULT,
-        });
-    }
+    require_in_range(total_debt, limits::MIN_DEBT, limits::MAX_DEBT_PER_VAULT, "debt")?;
 
     // 2. Calculate ICR for new vault
     let icr = calculate_icr(collateral, total_debt, ctx.btc_price)?;
 
-    // 3. Get current TCR
+    // 3. Get current TCR and check minimum ratio (MCR in normal mode, CCR in recovery mode)
     let tcr = calculate_tcr(
         ctx.state.protocol.total_collateral,
         ctx.state.protocol.total_debt,
         ctx.btc_price,
     )?;
-
-    // 4. Check minimum ratio (MCR in normal mode, CCR in recovery mode)
     let min_ratio = get_min_ratio(tcr);
-    if icr < min_ratio {
-        return Err(ZkUsdError::Undercollateralized {
-            current_ratio: icr,
-            required_ratio: min_ratio,
-        });
-    }
+    require_min_icr(icr, min_ratio)?;
 
-    // 5. In Recovery Mode, new vault must improve TCR
+    // 4. In Recovery Mode, new vault must improve TCR
     if is_recovery_mode(tcr) {
         let new_total_coll = safe_add(ctx.state.protocol.total_collateral, collateral)?;
         let new_total_debt = safe_add(ctx.state.protocol.total_debt, total_debt)?;
         let new_tcr = calculate_tcr(new_total_coll, new_total_debt, ctx.btc_price)?;
-
-        if new_tcr <= tcr {
-            return Err(ZkUsdError::WouldWorsenTCR {
-                current_tcr: tcr,
-                new_tcr,
-            });
-        }
+        require_tcr_not_worsened(tcr, new_tcr)?;
     }
 
-    // 6. Verify BTC collateral is being deposited
-    // NOTE: In Charms v8, coin_ins may not be populated from spell inputs with empty charms.
-    // The BTC flow is validated at the Bitcoin transaction level (UTXOs must balance).
-    // Only check if coin_ins is actually populated (btc_inputs > 0).
-    if ctx.btc_inputs > 0 && ctx.btc_inputs < collateral {
-        return Err(ZkUsdError::InsufficientBalance {
-            available: ctx.btc_inputs,
-            requested: collateral,
-        });
-    }
+    // 5. Verify BTC collateral is being deposited
+    // Charms v0.12+ always populates coin_ins (PR #151 fix)
+    require_sufficient_balance(ctx.btc_inputs, collateral)?;
 
     // 7. Calculate borrowing fee
     let borrowing_fee = calculate_borrowing_fee(debt, ctx.state.protocol.base_rate)?;
@@ -330,19 +303,10 @@ fn validate_close_vault(ctx: &mut VaultContext, vault_id: &VaultId) -> ZkUsdResu
     })?;
 
     // 2. Only owner can close
-    if vault.owner != ctx.signer {
-        return Err(ZkUsdError::Unauthorized {
-            expected: vault.owner,
-            actual: ctx.signer,
-        });
-    }
+    require_owner(vault.owner, ctx.signer)?;
 
     // 3. Check vault is active
-    if !vault.is_active() {
-        return Err(ZkUsdError::VaultNotActive {
-            vault_id: *vault_id,
-        });
-    }
+    check!(vault.is_active(), ZkUsdError::VaultNotActive { vault_id: *vault_id });
 
     // 4. In Recovery Mode, cannot close if it's the last vault
     let tcr = calculate_tcr(
@@ -351,30 +315,21 @@ fn validate_close_vault(ctx: &mut VaultContext, vault_id: &VaultId) -> ZkUsdResu
         ctx.btc_price,
     )?;
 
-    if is_recovery_mode(tcr) && ctx.state.protocol.active_vault_count == 1 {
-        return Err(ZkUsdError::RecoveryModeRestriction {
-            operation: RecoveryModeOp::CloseLastVault,
-        });
-    }
+    check!(
+        !(is_recovery_mode(tcr) && ctx.state.protocol.active_vault_count == 1),
+        ZkUsdError::RecoveryModeRestriction { operation: RecoveryModeOp::CloseLastVault }
+    );
 
     // 5. Verify all debt is being repaid (zkUSD burned)
-    if ctx.zkusd_inputs < vault.debt {
-        return Err(ZkUsdError::InsufficientBalance {
-            available: ctx.zkusd_inputs,
-            requested: vault.debt,
-        });
-    }
+    require_sufficient_balance(ctx.zkusd_inputs, vault.debt)?;
 
     // 6. Verify collateral is being returned to owner
-    if ctx.btc_outputs < vault.collateral {
-        return Err(ZkUsdError::InvalidStateTransition);
-    }
+    // Charms v0.12+ always populates coin_outs (PR #151 fix)
+    check!(ctx.btc_outputs >= vault.collateral, ZkUsdError::InvalidStateTransition);
 
     // 7. Verify vault is marked as closed
     let new_vault = ctx.new_vault.as_ref().ok_or(ZkUsdError::StateNotFound)?;
-    if new_vault.status != VaultStatus::Closed {
-        return Err(ZkUsdError::InvalidStateTransition);
-    }
+    verify_field_eq(new_vault.status, VaultStatus::Closed)?;
 
     // 8. Emit event
     ctx.events.emit(ZkUsdEvent::VaultClosed {
@@ -395,9 +350,7 @@ fn validate_add_collateral(
     amount: u64,
 ) -> ZkUsdResult<()> {
     // 1. Amount must be positive
-    if amount == 0 {
-        return Err(ZkUsdError::ZeroAmount);
-    }
+    require_positive(amount, "collateral_amount")?;
 
     // 2. Get vault
     let vault = ctx.vault.as_ref().ok_or(ZkUsdError::VaultNotFound {
@@ -405,29 +358,14 @@ fn validate_add_collateral(
     })?;
 
     // 3. Only owner can add collateral
-    if vault.owner != ctx.signer {
-        return Err(ZkUsdError::Unauthorized {
-            expected: vault.owner,
-            actual: ctx.signer,
-        });
-    }
+    require_owner(vault.owner, ctx.signer)?;
 
     // 4. Vault must be active
-    if !vault.is_active() {
-        return Err(ZkUsdError::VaultNotActive {
-            vault_id: *vault_id,
-        });
-    }
+    check!(vault.is_active(), ZkUsdError::VaultNotActive { vault_id: *vault_id });
 
     // 5. Verify BTC is being deposited
-    // NOTE: In Charms v8, coin_ins may not be populated from spell inputs with empty charms.
-    // Only check if coin_ins is actually populated (btc_inputs > 0).
-    if ctx.btc_inputs > 0 && ctx.btc_inputs < amount {
-        return Err(ZkUsdError::InsufficientBalance {
-            available: ctx.btc_inputs,
-            requested: amount,
-        });
-    }
+    // Charms v0.12+ always populates coin_ins (PR #151 fix)
+    require_sufficient_balance(ctx.btc_inputs, amount)?;
 
     // 6. Calculate new collateral and ICR
     let new_collateral = safe_add(vault.collateral, amount)?;
@@ -435,9 +373,7 @@ fn validate_add_collateral(
 
     // 7. Verify vault state update
     let new_vault = ctx.new_vault.as_ref().ok_or(ZkUsdError::StateNotFound)?;
-    if new_vault.collateral != new_collateral {
-        return Err(ZkUsdError::InvalidStateTransition);
-    }
+    verify_field_eq(new_vault.collateral, new_collateral)?;
 
     // 8. Emit event
     ctx.events.emit(ZkUsdEvent::CollateralAdded {
@@ -458,9 +394,7 @@ fn validate_withdraw_collateral(
     amount: u64,
 ) -> ZkUsdResult<()> {
     // 1. Amount must be positive
-    if amount == 0 {
-        return Err(ZkUsdError::ZeroAmount);
-    }
+    require_positive(amount, "withdraw_amount")?;
 
     // 2. Get vault
     let vault = ctx.vault.as_ref().ok_or(ZkUsdError::VaultNotFound {
@@ -468,19 +402,10 @@ fn validate_withdraw_collateral(
     })?;
 
     // 3. Only owner can withdraw
-    if vault.owner != ctx.signer {
-        return Err(ZkUsdError::Unauthorized {
-            expected: vault.owner,
-            actual: ctx.signer,
-        });
-    }
+    require_owner(vault.owner, ctx.signer)?;
 
     // 4. Vault must be active
-    if !vault.is_active() {
-        return Err(ZkUsdError::VaultNotActive {
-            vault_id: *vault_id,
-        });
-    }
+    check!(vault.is_active(), ZkUsdError::VaultNotActive { vault_id: *vault_id });
 
     // 5. Cannot withdraw more than available
     if amount > vault.collateral {
@@ -717,10 +642,12 @@ fn validate_liquidate(ctx: &mut VaultContext, vault_id: &VaultId) -> ZkUsdResult
         });
     }
 
-    // 6. Calculate liquidation amounts
+    // 6. Calculate liquidation amounts with safe arithmetic
     let gas_comp_coll = vault.collateral * zkusd_common::constants::liquidation::GAS_COMP_BPS / 10000;
     let liquidator_bonus = vault.collateral * zkusd_common::constants::liquidation::LIQUIDATOR_BONUS_BPS / 10000;
-    let coll_to_sp = vault.collateral - gas_comp_coll - liquidator_bonus;
+    // Use safe_sub to prevent underflow if constants are misconfigured
+    let coll_after_gas = safe_sub(vault.collateral, gas_comp_coll)?;
+    let coll_to_sp = safe_sub(coll_after_gas, liquidator_bonus)?;
 
     // 7. Verify vault is marked as liquidated
     let new_vault = ctx.new_vault.as_ref().ok_or(ZkUsdError::StateNotFound)?;
@@ -887,9 +814,8 @@ fn validate_atomic_rescue(
     }
 
     // 5. Verify rescuer is providing collateral
-    // NOTE: In Charms v8, coin_ins may not be populated from spell inputs with empty charms.
-    // Only check if coin_ins is actually populated (btc_inputs > 0).
-    if ctx.btc_inputs > 0 && ctx.btc_inputs < collateral_to_add {
+    // Charms v0.12+ always populates coin_ins (PR #151 fix)
+    if ctx.btc_inputs < collateral_to_add {
         return Err(ZkUsdError::InsufficientBalance {
             available: ctx.btc_inputs,
             requested: collateral_to_add,
@@ -1680,5 +1606,829 @@ mod tests {
         let result = validate(&mut ctx, &action);
 
         assert!(matches!(result, Err(ZkUsdError::InsuranceNotTriggerable { .. })));
+    }
+
+    // ============ ICR Edge Case Tests ============
+
+    #[test]
+    fn test_open_vault_exactly_at_mcr_110_percent() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        // Setup vault with exactly 110% ICR (at MCR threshold)
+        // ICR = (collateral * price) / debt = (1.1 BTC * $100k) / $100k debt = 110%
+        let collateral = 110_000_000; // 1.1 BTC = $110,000
+        let debt = 100_000 * ONE_ZKUSD - limits::LIQUIDATION_RESERVE; // Adjust for reserve
+        let total_debt = debt + limits::LIQUIDATION_RESERVE;
+
+        ctx.signer = owner;
+        ctx.btc_inputs = collateral;
+
+        let new_vault = Vault::new([0u8; 32], owner, collateral, total_debt, 100);
+        ctx.new_vault = Some(new_vault);
+        ctx.new_state.protocol.total_collateral = collateral;
+        ctx.new_state.protocol.total_debt = total_debt;
+
+        let action = VaultAction::OpenVault { collateral, debt };
+        let result = validate(&mut ctx, &action);
+
+        // Exactly at MCR should be allowed
+        assert!(result.is_ok(), "Vault at exactly 110% ICR should succeed: {:?}", result);
+    }
+
+    #[test]
+    fn test_open_vault_just_below_mcr_109_percent() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        // Setup vault with 109% ICR (just below MCR)
+        let collateral = 109_000_000; // 1.09 BTC = $109,000
+        let debt = 100_000 * ONE_ZKUSD - limits::LIQUIDATION_RESERVE;
+
+        ctx.signer = owner;
+        ctx.btc_inputs = collateral;
+
+        let action = VaultAction::OpenVault { collateral, debt };
+        let result = validate(&mut ctx, &action);
+
+        // Just below MCR should fail
+        assert!(matches!(result, Err(ZkUsdError::Undercollateralized { .. })));
+    }
+
+    #[test]
+    fn test_open_vault_at_ccr_150_percent() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        // Setup vault with exactly 150% ICR (at CCR threshold)
+        let collateral = 150_000_000; // 1.5 BTC = $150,000
+        let debt = 100_000 * ONE_ZKUSD - limits::LIQUIDATION_RESERVE;
+        let total_debt = debt + limits::LIQUIDATION_RESERVE;
+
+        ctx.signer = owner;
+        ctx.btc_inputs = collateral;
+
+        let new_vault = Vault::new([0u8; 32], owner, collateral, total_debt, 100);
+        ctx.new_vault = Some(new_vault);
+        ctx.new_state.protocol.total_collateral = collateral;
+        ctx.new_state.protocol.total_debt = total_debt;
+
+        let action = VaultAction::OpenVault { collateral, debt };
+        let result = validate(&mut ctx, &action);
+
+        assert!(result.is_ok(), "Vault at 150% ICR should succeed: {:?}", result);
+    }
+
+    // ============ Fee Calculation Tests ============
+
+    #[test]
+    fn test_borrowing_fee_calculation() {
+        // Verify borrowing fee is calculated correctly
+        let debt = 100_000 * ONE_ZKUSD;
+        let base_rate = 50; // 0.5% = 50 bps (minimum)
+
+        let fee = calculate_borrowing_fee(debt, base_rate).unwrap();
+        // Fee should be 0.5% of debt = 500 zkUSD
+        assert_eq!(fee, 500 * ONE_ZKUSD);
+    }
+
+    #[test]
+    fn test_borrowing_fee_capped_at_max() {
+        // Test that fee is capped at maximum
+        let debt = 100_000 * ONE_ZKUSD;
+        let base_rate = 1000; // 10% - way above max 5%
+
+        let fee = calculate_borrowing_fee(debt, base_rate).unwrap();
+        // Fee should be capped at 5% = 5000 zkUSD
+        assert_eq!(fee, 5_000 * ONE_ZKUSD);
+    }
+
+    #[test]
+    fn test_borrowing_fee_uses_minimum() {
+        // Test that fee uses minimum when base_rate is 0
+        let debt = 100_000 * ONE_ZKUSD;
+        let base_rate = 0; // 0%
+
+        let fee = calculate_borrowing_fee(debt, base_rate).unwrap();
+        // Fee should use minimum 0.5% = 500 zkUSD
+        assert_eq!(fee, 500 * ONE_ZKUSD);
+    }
+
+    // ============ Authorization Tests ============
+
+    #[test]
+    fn test_close_vault_not_owner() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+        let attacker = [99u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 150_000_000,
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault.clone());
+        ctx.signer = attacker; // Not the owner
+        ctx.zkusd_inputs = vault.debt;
+
+        let action = VaultAction::CloseVault { vault_id: [0u8; 32] };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::Unauthorized { .. })));
+    }
+
+    #[test]
+    fn test_add_collateral_not_owner() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+        let attacker = [99u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 150_000_000,
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = attacker; // Not the owner
+        ctx.btc_inputs = ONE_BTC;
+
+        let action = VaultAction::AddCollateral {
+            vault_id: [0u8; 32],
+            amount: ONE_BTC
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::Unauthorized { .. })));
+    }
+
+    #[test]
+    fn test_withdraw_collateral_not_owner() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+        let attacker = [99u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 200_000_000, // 2 BTC
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = attacker; // Not the owner
+
+        let action = VaultAction::WithdrawCollateral {
+            vault_id: [0u8; 32],
+            amount: ONE_BTC
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::Unauthorized { .. })));
+    }
+
+    #[test]
+    fn test_mint_debt_not_owner() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+        let attacker = [99u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 200_000_000, // 2 BTC
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = attacker; // Not the owner
+
+        let action = VaultAction::MintDebt {
+            vault_id: [0u8; 32],
+            amount: 10_000 * ONE_ZKUSD
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::Unauthorized { .. })));
+    }
+
+    // ============ Recovery Mode Tests ============
+
+    #[test]
+    fn test_recovery_mode_blocks_withdraw_collateral() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        // Set up system in recovery mode (TCR < 150%)
+        // Total: 1.4 BTC ($140k) backing $100k debt = 140% TCR (recovery mode)
+        ctx.state.protocol.total_collateral = 140_000_000;
+        ctx.state.protocol.total_debt = 100_000 * ONE_ZKUSD;
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 200_000_000, // 2 BTC - healthy vault
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+
+        let action = VaultAction::WithdrawCollateral {
+            vault_id: [0u8; 32],
+            amount: 10_000_000 // Try to withdraw 0.1 BTC
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::RecoveryModeRestriction { .. })));
+    }
+
+    #[test]
+    fn test_recovery_mode_blocks_mint_debt() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        // Set up system in recovery mode (TCR < 150%)
+        ctx.state.protocol.total_collateral = 140_000_000;
+        ctx.state.protocol.total_debt = 100_000 * ONE_ZKUSD;
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 200_000_000, // 2 BTC - healthy vault
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+
+        let action = VaultAction::MintDebt {
+            vault_id: [0u8; 32],
+            amount: 10_000 * ONE_ZKUSD
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::RecoveryModeRestriction { .. })));
+    }
+
+    // ============ Vault State Tests ============
+
+    #[test]
+    fn test_operations_on_closed_vault_fail() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 0,
+            debt: 0,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Closed, // Vault is closed
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+        ctx.btc_inputs = ONE_BTC;
+
+        let action = VaultAction::AddCollateral {
+            vault_id: [0u8; 32],
+            amount: ONE_BTC
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::VaultNotActive { .. })));
+    }
+
+    #[test]
+    fn test_operations_on_liquidated_vault_fail() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 100_000_000,
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Liquidated, // Vault was liquidated
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+        ctx.zkusd_inputs = 50_000 * ONE_ZKUSD;
+
+        let action = VaultAction::RepayDebt {
+            vault_id: [0u8; 32],
+            amount: 10_000 * ONE_ZKUSD
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::VaultNotActive { .. })));
+    }
+
+    // ============ Liquidation Edge Cases ============
+
+    #[test]
+    fn test_liquidation_not_allowed_at_mcr() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+        let liquidator = [2u8; 32];
+
+        // Vault with exactly 110% ICR (at MCR, not below)
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 110_000_000, // 1.1 BTC = $110,000
+            debt: 100_000 * ONE_ZKUSD, // $100,000 debt -> exactly 110% ICR
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = liquidator;
+        // Normal mode TCR (above 150%)
+        ctx.state.protocol.total_collateral = 200_000_000;
+        ctx.state.protocol.total_debt = 100_000 * ONE_ZKUSD;
+
+        let action = VaultAction::Liquidate { vault_id: [0u8; 32] };
+        let result = validate(&mut ctx, &action);
+
+        // At exactly MCR should NOT be liquidatable in normal mode
+        assert!(matches!(result, Err(ZkUsdError::NotLiquidatable { .. })));
+    }
+
+    #[test]
+    fn test_recovery_mode_liquidation_below_ccr() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+        let liquidator = [2u8; 32];
+
+        // Vault with 140% ICR (below CCR 150% but above MCR 110%)
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 140_000_000, // 1.4 BTC = $140,000
+            debt: 100_000 * ONE_ZKUSD, // $100,000 debt -> 140% ICR
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault.clone());
+        ctx.new_vault = Some(Vault {
+            status: VaultStatus::Liquidated,
+            ..vault
+        });
+        ctx.signer = liquidator;
+        // System in recovery mode (TCR < 150%)
+        ctx.state.protocol.total_collateral = 140_000_000;
+        ctx.state.protocol.total_debt = 100_000 * ONE_ZKUSD;
+
+        let action = VaultAction::Liquidate { vault_id: [0u8; 32] };
+        let result = validate(&mut ctx, &action);
+
+        // In recovery mode, vault with ICR < CCR can be liquidated
+        assert!(result.is_ok(), "Vault below CCR should be liquidatable in recovery mode: {:?}", result);
+    }
+
+    // ============ Debt Repayment Tests ============
+
+    #[test]
+    fn test_repay_debt_zero_amount() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 150_000_000,
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+
+        let action = VaultAction::RepayDebt {
+            vault_id: [0u8; 32],
+            amount: 0
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::ZeroAmount)));
+    }
+
+    #[test]
+    fn test_repay_debt_exceeds_debt() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 150_000_000,
+            debt: 50_000 * ONE_ZKUSD + limits::LIQUIDATION_RESERVE,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+        ctx.zkusd_inputs = 100_000 * ONE_ZKUSD;
+
+        // Try to repay more than net debt (debt - liquidation reserve)
+        let action = VaultAction::RepayDebt {
+            vault_id: [0u8; 32],
+            amount: 60_000 * ONE_ZKUSD // More than 50k net debt
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::ExceedsMaximum { .. })));
+    }
+
+    // ============ Protocol Pause Tests ============
+
+    #[test]
+    fn test_protocol_paused_blocks_operations() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        // Pause the protocol
+        ctx.state.protocol.is_paused = true;
+
+        ctx.signer = owner;
+        ctx.btc_inputs = 150_000_000;
+
+        let action = VaultAction::OpenVault {
+            collateral: 150_000_000,
+            debt: 50_000 * ONE_ZKUSD
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::ProtocolPaused)));
+    }
+
+    // ============ Redemption Tests ============
+
+    #[test]
+    fn test_redeem_zero_amount() {
+        let mut ctx = create_test_context();
+
+        let action = VaultAction::Redeem { amount: 0 };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::ZeroAmount)));
+    }
+
+    #[test]
+    fn test_redeem_insufficient_zkusd() {
+        let mut ctx = create_test_context();
+        ctx.zkusd_inputs = 1_000 * ONE_ZKUSD;
+
+        // Try to redeem more than available
+        let action = VaultAction::Redeem { amount: 5_000 * ONE_ZKUSD };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::InsufficientBalance { .. })));
+    }
+
+    // ============ Collateral Edge Cases ============
+
+    #[test]
+    fn test_add_collateral_zero_amount() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 150_000_000,
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+
+        let action = VaultAction::AddCollateral {
+            vault_id: [0u8; 32],
+            amount: 0
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::InvalidInput { .. })));
+    }
+
+    #[test]
+    fn test_withdraw_collateral_zero_amount() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 150_000_000,
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+
+        let action = VaultAction::WithdrawCollateral {
+            vault_id: [0u8; 32],
+            amount: 0
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::InvalidInput { .. })));
+    }
+
+    #[test]
+    fn test_withdraw_more_collateral_than_available() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 150_000_000, // 1.5 BTC
+            debt: 50_000 * ONE_ZKUSD,
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+        // Healthy TCR to allow withdrawal
+        ctx.state.protocol.total_collateral = 300_000_000;
+        ctx.state.protocol.total_debt = 100_000 * ONE_ZKUSD;
+
+        // Try to withdraw more than collateral
+        let action = VaultAction::WithdrawCollateral {
+            vault_id: [0u8; 32],
+            amount: 200_000_000 // 2 BTC - more than 1.5 BTC available
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::InsufficientBalance { .. })));
+    }
+
+    #[test]
+    fn test_withdraw_collateral_would_undercollateralize() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 120_000_000, // 1.2 BTC = $120k
+            debt: 100_000 * ONE_ZKUSD, // $100k debt -> 120% ICR
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault.clone());
+        ctx.new_vault = Some(Vault {
+            collateral: 100_000_000, // After withdrawal: 1 BTC = $100k -> 100% ICR
+            ..vault
+        });
+        ctx.signer = owner;
+        // Healthy TCR
+        ctx.state.protocol.total_collateral = 300_000_000;
+        ctx.state.protocol.total_debt = 150_000 * ONE_ZKUSD;
+
+        // Try to withdraw 0.2 BTC, would drop ICR to 100%
+        let action = VaultAction::WithdrawCollateral {
+            vault_id: [0u8; 32],
+            amount: 20_000_000
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::Undercollateralized { .. })));
+    }
+
+    // ============ VaultManagerState Tests ============
+
+    #[test]
+    fn test_vault_manager_state_rejects_zero_active_pool() {
+        let admin = [0u8; 32];
+        let zkusd_token = [1u8; 32];
+        let stability_pool = [2u8; 32];
+        let price_oracle = [3u8; 32];
+        let zero_pool = [0u8; 32]; // Invalid zero address
+        let default_pool = [5u8; 32];
+
+        let result = VaultManagerState::new(
+            admin, zkusd_token, stability_pool, price_oracle, zero_pool, default_pool
+        );
+
+        assert!(matches!(result, Err(ZkUsdError::InvalidAddress { .. })));
+    }
+
+    #[test]
+    fn test_vault_manager_state_rejects_zero_default_pool() {
+        let admin = [0u8; 32];
+        let zkusd_token = [1u8; 32];
+        let stability_pool = [2u8; 32];
+        let price_oracle = [3u8; 32];
+        let active_pool = [4u8; 32];
+        let zero_pool = [0u8; 32]; // Invalid zero address
+
+        let result = VaultManagerState::new(
+            admin, zkusd_token, stability_pool, price_oracle, active_pool, zero_pool
+        );
+
+        assert!(matches!(result, Err(ZkUsdError::InvalidAddress { .. })));
+    }
+
+    // ============ Debt Limit Tests ============
+
+    #[test]
+    fn test_mint_debt_exceeds_max_per_vault() {
+        let mut ctx = create_test_context();
+        let owner = [1u8; 32];
+
+        // Vault with large collateral
+        let vault = Vault {
+            id: [0u8; 32],
+            owner,
+            collateral: 20_000 * ONE_BTC, // 20,000 BTC = $2B
+            debt: 9_000_000 * ONE_ZKUSD, // 9M zkUSD existing debt
+            created_at: 50,
+            last_updated: 50,
+            status: VaultStatus::Active,
+            interest_rate_bps: 100,
+            accrued_interest: 0,
+            redistributed_debt: 0,
+            redistributed_collateral: 0,
+            insurance_balance: 0,
+        };
+
+        ctx.vault = Some(vault);
+        ctx.signer = owner;
+        // Healthy TCR
+        ctx.state.protocol.total_collateral = 20_000 * ONE_BTC;
+        ctx.state.protocol.total_debt = 9_000_000 * ONE_ZKUSD;
+
+        // Try to mint 2M more, would exceed 10M max per vault
+        let action = VaultAction::MintDebt {
+            vault_id: [0u8; 32],
+            amount: 2_000_000 * ONE_ZKUSD
+        };
+        let result = validate(&mut ctx, &action);
+
+        assert!(matches!(result, Err(ZkUsdError::ExceedsMaximum { .. })));
+    }
+
+    // ============ Generate Vault ID Tests ============
+
+    #[test]
+    fn test_generate_vault_id_deterministic() {
+        let owner = [1u8; 32];
+        let block_height = 100;
+        let nonce = 1;
+
+        let id1 = generate_vault_id(&owner, block_height, nonce);
+        let id2 = generate_vault_id(&owner, block_height, nonce);
+
+        // Same inputs should produce same ID
+        assert_eq!(id1, id2);
+    }
+
+    #[test]
+    fn test_generate_vault_id_unique_for_different_inputs() {
+        let owner1 = [1u8; 32];
+        let owner2 = [2u8; 32];
+        let block_height = 100;
+        let nonce = 1;
+
+        let id1 = generate_vault_id(&owner1, block_height, nonce);
+        let id2 = generate_vault_id(&owner2, block_height, nonce);
+
+        // Different owners should produce different IDs
+        assert_ne!(id1, id2);
+
+        // Different nonces should produce different IDs
+        let id3 = generate_vault_id(&owner1, block_height, 2);
+        assert_ne!(id1, id3);
+
+        // Different block heights should produce different IDs
+        let id4 = generate_vault_id(&owner1, 200, nonce);
+        assert_ne!(id1, id4);
     }
 }

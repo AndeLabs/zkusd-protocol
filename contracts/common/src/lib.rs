@@ -38,6 +38,7 @@ pub mod oracle;
 pub mod vault_manager;
 pub mod stability_pool;
 pub mod token_ops;
+pub mod validation;
 
 #[cfg(test)]
 mod tests;
@@ -54,3 +55,4 @@ pub use oracle::*;
 pub use vault_manager::*;
 pub use stability_pool::*;
 pub use token_ops::*;
+pub use validation::*;
