@@ -1,25 +1,29 @@
 // Testnet4 Deployment Configuration
 // Generated from deployments/testnet4/deployment-config.json
 //
-// STATUS: V4 - Updated vault-manager with btc_inputs fix for Charms v8 compatibility
-// VaultManager updated 2026-01-22 with btc_inputs check fix
+// STATUS: V5 - VaultManager with Charms v8 compatibility fixes
+// VaultManager updated 2026-01-23 with:
+//   - btc_inputs check fix (from V4)
+//   - validate_close_vault Charms v8 fix
+//   - Liquidation safe_sub to prevent underflow
 //
 // Current WASM VKs (from compiled binaries):
 //   price-oracle:    98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d
 //   zkusd-token:     ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
-//   vault-manager:   3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0 (V4 - btc_inputs fix)
+//   vault-manager:   8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42 (V5 - full Charms v8 compat)
 //   stability-pool:  98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9
 
 import type { NetworkDeployment } from './networks';
 
-// Contracts are now deployed with matching VKs
-export const TESTNET4_NEEDS_REDEPLOYMENT = false;
+// VaultManager V5 needs deployment to testnet4
+export const TESTNET4_NEEDS_REDEPLOYMENT = true;
 
-// VKs from current compiled WASM
+// VKs - vaultManager will be updated after deployment
 export const TESTNET4_VKS = {
   priceOracle: '98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d',
   zkusdToken: 'ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128',
-  vaultManager: '3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0', // V4 with btc_inputs fix
+  // V5 VK - pending deployment (close_vault fix + liquidation safe_sub)
+  vaultManager: '8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42',
   stabilityPool: '98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9',
 };
 
@@ -52,10 +56,13 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
     },
     vaultManager: {
       appId: 'ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9',
-      vk: '3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0', // V4 with btc_inputs fix
-      appRef: 'n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/3b981bfd64228b2020484d271b0a15c03dec9717c9f0edde3a44155296b303b0',
-      spellTx: 'aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02',
-      stateUtxo: 'aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02:0',
+      // V5 VK - Needs redeployment! Current deployed is old V3
+      // V5 fixes: btc_inputs check, close_vault Charms v8 compat, liquidation safe_sub
+      vk: '8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42',
+      appRef: 'n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42',
+      // TODO: Update after V5 deployment
+      spellTx: 'PENDING_V5_DEPLOYMENT',
+      stateUtxo: 'PENDING_V5_DEPLOYMENT:0',
       status: 'pending',
       wasmPath: '/wasm/zkusd-vault-manager-app.wasm',
     },
