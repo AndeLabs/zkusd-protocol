@@ -1,27 +1,27 @@
 // Testnet4 Deployment Configuration
 // Generated from deployments/testnet4/deployment-config.json
 //
-// STATUS: V5 - StabilityPool DEPLOYED 2026-01-24
+// STATUS: V6 - ALL CONTRACTS DEPLOYED 2026-01-24
 // - StabilityPool deployed with Charms v0.11.1 SDK
-// - VaultManager pending deployment
+// - VaultManager deployed with Charms v0.11.1 SDK
 //
 // Current WASM VKs (from compiled binaries with Charms v0.11.1):
 //   price-oracle:    98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d
 //   zkusd-token:     ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
-//   vault-manager:   8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42 (pending)
+//   vault-manager:   e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9 (DEPLOYED)
 //   stability-pool:  54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143 (DEPLOYED)
 
 import type { NetworkDeployment } from './networks';
 
-// VaultManager V5 needs deployment to testnet4
-export const TESTNET4_NEEDS_REDEPLOYMENT = true;
+// All contracts deployed to testnet4
+export const TESTNET4_NEEDS_REDEPLOYMENT = false;
 
-// VKs - vaultManager will be updated after deployment
+// All VKs deployed to testnet4
 export const TESTNET4_VKS = {
   priceOracle: '98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d',
   zkusdToken: 'ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128',
-  // V5 VK - pending deployment (close_vault fix + liquidation safe_sub)
-  vaultManager: '8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42',
+  // V6 VK - deployed 2026-01-24 (Charms v0.11.1 SDK)
+  vaultManager: 'e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9',
   // V5 VK - deployed 2026-01-24
   stabilityPool: '54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143',
 };
@@ -54,15 +54,13 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
       wasmPath: '/wasm/zkusd-token-app.wasm',
     },
     vaultManager: {
-      appId: 'ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9',
-      // V5 VK - Needs redeployment! Current deployed is old V3
-      // V5 fixes: btc_inputs check, close_vault Charms v8 compat, liquidation safe_sub
-      vk: '8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42',
-      appRef: 'n/ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9/8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42',
-      // TODO: Update after V5 deployment
-      spellTx: 'PENDING_V5_DEPLOYMENT',
-      stateUtxo: 'PENDING_V5_DEPLOYMENT:0',
-      status: 'pending',
+      // V6 - Deployed 2026-01-24 with Charms v0.11.1 SDK
+      appId: '69035cf26e7519f98d69d61b04ac3687d54998663ae8e3bba9e3666bc1d5a16e',
+      vk: 'e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9',
+      appRef: 'n/69035cf26e7519f98d69d61b04ac3687d54998663ae8e3bba9e3666bc1d5a16e/e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9',
+      spellTx: 'df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322',
+      stateUtxo: 'df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322:0',
+      status: 'confirmed',
       wasmPath: '/wasm/zkusd-vault-manager-app.wasm',
     },
     stabilityPool: {
@@ -93,10 +91,10 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
 };
 
 // Cross-reference App IDs (for building spells)
-// Updated to match V3 deployment
+// Updated to match V6 deployment (2026-01-24)
 export const TESTNET4_CROSS_REFS = {
-  // Token.authorized_minter = VaultManager App ID
-  tokenAuthorizedMinter: [202, 138, 178, 220, 48, 201, 123, 123, 225, 214, 233, 23, 92, 51, 248, 40, 170, 196, 71, 145, 127, 245, 96, 95, 202, 15, 243, 172, 255, 203, 31, 169],
+  // Token.authorized_minter = VaultManager App ID (V6)
+  tokenAuthorizedMinter: [105, 3, 92, 242, 110, 117, 25, 249, 141, 105, 214, 27, 4, 172, 54, 135, 213, 73, 152, 102, 58, 232, 227, 187, 169, 227, 102, 107, 193, 213, 161, 110],
   // VaultManager.zkusd_token_id = Token App ID
   vmTokenId: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241],
   // VaultManager.stability_pool_id = StabilityPool App ID (V5 - 2026-01-24)
@@ -105,6 +103,6 @@ export const TESTNET4_CROSS_REFS = {
   vmOracleId: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181],
   // StabilityPool.zkusd_token_id = Token App ID
   spTokenId: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241],
-  // StabilityPool.vault_manager_id = VaultManager App ID
-  spVaultManagerId: [202, 138, 178, 220, 48, 201, 123, 123, 225, 214, 233, 23, 92, 51, 248, 40, 170, 196, 71, 145, 127, 245, 96, 95, 202, 15, 243, 172, 255, 203, 31, 169],
+  // StabilityPool.vault_manager_id = VaultManager App ID (V6)
+  spVaultManagerId: [105, 3, 92, 242, 110, 117, 25, 249, 141, 105, 214, 27, 4, 172, 54, 135, 213, 73, 152, 102, 58, 232, 227, 187, 169, 227, 102, 107, 193, 213, 161, 110],
 };

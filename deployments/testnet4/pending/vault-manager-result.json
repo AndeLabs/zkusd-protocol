@@ -1,0 +1,13 @@
+{
+  "contract": "vault-manager",
+  "version": "V5",
+  "network": "testnet4",
+  "deployed_at": "2026-01-24T17:26:51.043Z",
+  "appId": "69035cf26e7519f98d69d61b04ac3687d54998663ae8e3bba9e3666bc1d5a16e",
+  "vk": "e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9",
+  "appRef": "n/69035cf26e7519f98d69d61b04ac3687d54998663ae8e3bba9e3666bc1d5a16e/e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9",
+  "commitTxId": "df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322",
+  "spellTxId": "df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322",
+  "stateUtxo": "df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322:0",
+  "explorer": "https://mempool.space/testnet4/tx/df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322"
+}

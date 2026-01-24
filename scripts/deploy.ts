@@ -220,11 +220,12 @@ async function broadcastTx(txHex: string): Promise<string> {
 async function getFeeRate(): Promise<number> {
   try {
     const response = await fetch(`${MEMPOOL_API}/v1/fees/recommended`);
-    if (!response.ok) return 5;
+    if (!response.ok) return 10;
     const fees = await response.json() as { halfHourFee?: number };
-    return fees.halfHourFee || 5;
+    // Use at least 10 sat/vB for testnet to ensure fast confirmation
+    return Math.max(fees.halfHourFee || 5, 10);
   } catch {
-    return 5;
+    return 10;
   }
 }
 
