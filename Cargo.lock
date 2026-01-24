@@ -70,8 +70,8 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "charms-data"
-version = "0.12.0"
-source = "git+https://github.com/CharmsDev/charms?branch=main#cafcbd9d9fa7d51a7c063e85d5c530088c199f19"
+version = "0.11.1"
+source = "git+https://github.com/CharmsDev/charms?tag=v0.11.1#b78b3183e3b19f8dce42a50e152cefa1b3409075"
 dependencies = [
  "anyhow",
  "ark-std",
@@ -83,8 +83,8 @@ dependencies = [
 
 [[package]]
 name = "charms-sdk"
-version = "0.12.0"
-source = "git+https://github.com/CharmsDev/charms?branch=main#cafcbd9d9fa7d51a7c063e85d5c530088c199f19"
+version = "0.11.1"
+source = "git+https://github.com/CharmsDev/charms?tag=v0.11.1#b78b3183e3b19f8dce42a50e152cefa1b3409075"
 dependencies = [
  "charms-data",
 ]

@@ -42,11 +42,12 @@ const MEMPOOL_API = 'https://mempool.space/testnet4/api';
 const CHARMS_PROVER_API = 'https://v8.charms.dev/spells/prove';
 
 // Cross-references from V3 deployment (Jan 2026)
+// Updated Jan 24, 2026 with new Stability Pool deployment
 const DEPLOYED_CONTRACTS = {
   priceOracle: '26186d7c27bb28748d1ec89ba1fb60125d8a256dfd9a978296aa59f8c7e9e8b5',
   zkusdToken: '7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1',
-  stabilityPool: '001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b',
-  // vaultManager will be updated with V5 deployment
+  // NEW: Stability Pool V5 - deployed 2026-01-24
+  stabilityPool: 'b9412ca5d8ed6ca34d5b316ca51c960c8bc69aa96de467c9e4eb7bbfab24e320',
   vaultManager: 'ca8ab2dc30c97b7be1d6e9175c33f828aac447917ff5605fca0ff3acffcb1fa9',
 };
 
@@ -105,16 +106,23 @@ const CONTRACTS: Record<string, ContractConfig> = {
   'stability-pool': {
     name: 'Stability Pool',
     wasmPath: 'apps/web/public/wasm/zkusd-stability-pool-app.wasm',
-    buildInitialState: () => ({
-      _type: 'StabilityPoolState',
+    // Flat structure - all fields at same level (Charms template pattern)
+    buildInitialState: (adminBytes: number[]) => ({
+      // Config fields
       zkusd_token_id: hexToBytes(DEPLOYED_CONTRACTS.zkusdToken),
       vault_manager_id: hexToBytes(DEPLOYED_CONTRACTS.vaultManager),
+      admin: adminBytes,
+      // State fields
       total_zkusd: 0,
       total_btc: 0,
       product_p: '1000000000000000000',
-      epoch_sum_s: [],
+      sum_s: 0,
+      current_epoch: 0,
+      current_scale: 0,
       depositor_count: 0,
     }),
+    // Witness: simple string format (UTXO ID) - Charms template pattern
+    useSimpleWitness: true,
   },
 };
 
@@ -127,6 +135,7 @@ interface ContractConfig {
   wasmPath: string;
   buildInitialState: (adminBytes: number[]) => object;
   buildInitWitness?: (adminBytes: number[]) => object;
+  useSimpleWitness?: boolean;  // Use UTXO ID string as witness (Charms template pattern)
 }
 
 interface WalletConfig {
@@ -264,7 +273,14 @@ function formatYamlValue(value: unknown, indent: string): string {
     return '\n' + lines.join('\n');
   }
   if (typeof value === 'boolean') return value.toString();
-  if (typeof value === 'string') return `"${value}"`;
+  if (typeof value === 'string') {
+    // Check if it's a numeric string (for large integers like u128)
+    // Output without quotes so YAML parser treats it as number
+    if (/^\d+$/.test(value) && value.length <= 40) {
+      return value;
+    }
+    return `"${value}"`;
+  }
   return String(value);
 }
 
@@ -293,9 +309,17 @@ function buildSpellYaml(
   // For new deployments, use collateral UTXO txid as identity (genesis)
   const genesisId = collateralUtxo.txid;
 
-  // Build private_inputs section if witness exists
+  // Build private_inputs section
   let privateInputsSection = '';
-  if (witness) {
+  if (contract.useSimpleWitness) {
+    // Simple string witness pattern (Charms template style)
+    const utxoIdStr = `${collateralUtxo.txid}:${collateralUtxo.vout}`;
+    privateInputsSection = `
+private_inputs:
+  ${vk}: "${utxoIdStr}"
+`;
+  } else if (witness) {
+    // Struct witness pattern
     const witnessLines = Object.entries(witness)
       .map(([key, value]) => {
         const formatted = formatYamlValue(value, '    ');
@@ -312,7 +336,7 @@ ${witnessLines}
 `;
   }
 
-  return `version: 8
+  return `version: 9
 apps:
   ${vk}: n/${genesisId}/${vk}${privateInputsSection}
 ins:
@@ -384,18 +408,104 @@ async function proveSpellWithCli(
       result = JSON.parse(output);
     }
 
-    if (!Array.isArray(result) || result.length !== 2) {
-      throw new Error(`Invalid prover output: ${jsonLine.slice(0, 200)}`);
+    if (!Array.isArray(result)) {
+      throw new Error(`Invalid prover output: expected array, got ${jsonLine.slice(0, 200)}`);
     }
 
-    return {
-      commitTx: result[0].bitcoin || result[0],
-      spellTx: result[1].bitcoin || result[1],
-    };
+    // Handle different prover output formats
+    if (result.length === 1) {
+      // Single combined transaction (newer Charms versions or mock mode)
+      const tx = result[0].bitcoin || result[0];
+      return {
+        commitTx: tx,
+        spellTx: tx,  // Same tx - will only broadcast once
+      };
+    }
+
+    if (result.length === 2) {
+      // Traditional two-transaction format (commit + spell)
+      return {
+        commitTx: result[0].bitcoin || result[0],
+        spellTx: result[1].bitcoin || result[1],
+      };
+    }
+
+    throw new Error(`Invalid prover output: expected 1 or 2 txs, got ${result.length}`);
   } catch (err) {
     const error = err as Error & { stderr?: string };
     throw new Error(`charms CLI failed: ${error.message}\n${error.stderr || ''}`);
   }
+}
+
+async function signCombinedTransaction(
+  txHex: string,
+  wallet: WalletConfig,
+  collateralPrevTxHex: string,
+  collateralVout: number,
+  fundingPrevTxHex: string,
+  fundingVout: number
+): Promise<string> {
+  const tx = bitcoin.Transaction.fromHex(txHex);
+  const collateralPrevTx = bitcoin.Transaction.fromHex(collateralPrevTxHex);
+  const fundingPrevTx = bitcoin.Transaction.fromHex(fundingPrevTxHex);
+
+  const psbt = new bitcoin.Psbt({ network: TESTNET4 });
+
+  // Add all inputs with their witnessUtxo
+  for (let i = 0; i < tx.ins.length; i++) {
+    const input = tx.ins[i];
+    let witnessUtxo;
+
+    if (i === 0) {
+      // Input 0 is collateral
+      const prevOut = collateralPrevTx.outs[collateralVout];
+      witnessUtxo = { script: prevOut.script, value: BigInt(prevOut.value) };
+    } else if (i === 1) {
+      // Input 1 is funding
+      const prevOut = fundingPrevTx.outs[fundingVout];
+      witnessUtxo = { script: prevOut.script, value: BigInt(prevOut.value) };
+    } else {
+      // Fetch other inputs if needed
+      const txid = Buffer.from(input.hash).reverse().toString('hex');
+      const inputPrevTx = bitcoin.Transaction.fromHex(await fetchRawTx(txid));
+      const prevOut = inputPrevTx.outs[input.index];
+      witnessUtxo = { script: prevOut.script, value: BigInt(prevOut.value) };
+    }
+
+    psbt.addInput({
+      hash: input.hash,
+      index: input.index,
+      sequence: input.sequence,
+      witnessUtxo,
+    });
+  }
+
+  // Add all outputs
+  for (const output of tx.outs) {
+    psbt.addOutput({ script: output.script, value: BigInt(output.value) });
+  }
+
+  // Sign all inputs
+  const privateKey = Buffer.from(wallet.private_key_hex, 'hex');
+  const signer = {
+    publicKey: Buffer.from(wallet.public_key, 'hex'),
+    sign: (hash: Buffer) => Buffer.from(ecc.sign(hash, privateKey)),
+  };
+
+  for (let i = 0; i < tx.ins.length; i++) {
+    psbt.signInput(i, signer);
+  }
+
+  // Finalize and extract
+  const finalTx = tx.clone();
+  for (let i = 0; i < tx.ins.length; i++) {
+    const partialSig = psbt.data.inputs[i].partialSig;
+    if (partialSig?.length) {
+      finalTx.ins[i].witness = [partialSig[0].signature, partialSig[0].pubkey];
+    }
+  }
+
+  return finalTx.toHex();
 }
 
 async function signTransaction(
@@ -514,14 +624,24 @@ async function deploy(contractKey: string, isDryRun: boolean): Promise<Deploymen
     '458771b330d2a61ba52b5567b5e2579366dcd9f9aca2749f00acdc468f03b423',
     'b6de6d2f414cf2b1182dd8e0640918574a282652d9fcbee3293418575590faa3',
     // 2026-01-23: Attempt with v0.12 SDK - "unexecutable" error
-    // Proof request: 0x7754e932ad98dce263ee13096a8356bd1a1b5e6e270292418afbd52cda0b10eb
-    'd93540abec20ae20159f9f4de685975f17ad68004b970ae765d71bad42103649', // funding
-    'da723ed8e69542b7c9552d3a461ff9c52b2fa8835970826bc6db9fbf71a832bd', // collateral
+    'd93540abec20ae20159f9f4de685975f17ad68004b970ae765d71bad42103649',
+    'da723ed8e69542b7c9552d3a461ff9c52b2fa8835970826bc6db9fbf71a832bd',
+    // 2026-01-23: Attempt with v0.11.1 SDK - contract validated but funding UTXO burned
+    'c49257d0a5ecc28b1c9919270eb799e85365de121ffb0a6432aec47af109cc11',
+    '4af324cfb4ac98789ec8df037ecc2ee3fd96db70cf8b1342badc2ebb96b58547',
+    // 2026-01-23: Second attempt with v0.11.1 - same duplicate error
+    '7c9295a5f070a92938abb7de26569f7b38d4c18096cf4c4446cd33f1bc931e9c',
+    '73758b50c86f19839c139402ededbcffea85a1f9aa79c7cb61cbf4db3c258a22',
+    // 2026-01-23: Third attempt - also burned
+    '67f1cfd8be188ff66363a57d741517d54cc2f06b80a149fd3e9b7b167e01af1a',
   ];
-  const fundingBlocklist = burnedUtxos;
+  // Collateral blocklist - UTXOs used in previous spell attempts (burned in prover cache)
+  const collateralBlocklist = burnedUtxos;
 
-  // UTXOs that were used as COLLATERAL - same as funding list now (all burned)
-  const collateralBlocklist = fundingBlocklist;
+  // Funding blocklist - EMPTY! We'll try using old UTXOs for funding
+  // Theory: "duplicate funding UTXO" error only applies when same spell
+  // With a fresh collateral UTXO (new app identity), old funding UTXOs might work
+  const fundingBlocklist: string[] = [];
 
   // For collateral: need fresh UTXO (not in collateralBlocklist) - creates new spell
   const freshForCollateral = byHeight.filter(u =>
@@ -540,8 +660,11 @@ async function deploy(contractKey: string, isDryRun: boolean): Promise<Deploymen
   // Pick collateral first (must be fresh)
   const collateralUtxo = freshForCollateral[0];
 
-  // Pick funding from available (excluding the one we picked for collateral)
-  const fundingCandidates = freshForFunding.filter(u => u.txid !== collateralUtxo.txid);
+  // Pick funding from available (excluding the exact UTXO we picked for collateral)
+  // Allow different vouts from the same txid
+  const fundingCandidates = freshForFunding.filter(u =>
+    !(u.txid === collateralUtxo.txid && u.vout === collateralUtxo.vout)
+  );
   if (fundingCandidates.length < 1) {
     throw new Error('Need UTXO for funding. Get new UTXOs from faucet.');
   }
@@ -574,7 +697,7 @@ async function deploy(contractKey: string, isDryRun: boolean): Promise<Deploymen
   const { commitTx, spellTx } = await proveSpellWithCli(
     spellYaml,
     contract.wasmPath,
-    [collateralPrevTx, feePrevTx],
+    [collateralPrevTx],  // Only spell input txs, not funding tx
     feeUtxo,
     wallet.address,
     feeRate,
@@ -606,25 +729,47 @@ async function deploy(contractKey: string, isDryRun: boolean): Promise<Deploymen
     };
   }
 
-  // 8. Sign
-  logSection('Signing Transactions');
-  const signedCommit = await signTransaction(commitTx, wallet, 0, feePrevTx, feeUtxo.vout);
-  log('Commit TX signed');
-  const signedSpell = await signTransaction(spellTx, wallet, 0, collateralPrevTx, collateralUtxo.vout);
-  log('Spell TX signed');
+  // 8. Sign and Broadcast
+  logSection('Signing and Broadcasting');
 
-  // 9. Broadcast
-  logSection('Broadcasting');
-  log('Commit TX...');
-  const commitTxId = await broadcastTx(signedCommit);
-  log(`✓ ${commitTxId}`);
+  // Check if combined transaction (same tx for both commit and spell)
+  const isCombinedTx = commitTx === spellTx;
 
-  log('Waiting 5s for propagation...');
-  await new Promise(r => setTimeout(r, 5000));
+  if (isCombinedTx) {
+    log('Combined transaction detected - signing both inputs');
+    // Combined tx has: input 0 = collateral, input 1 = funding
+    const signedTx = await signCombinedTransaction(
+      commitTx, wallet,
+      collateralPrevTx, collateralUtxo.vout,  // Input 0
+      feePrevTx, feeUtxo.vout                  // Input 1
+    );
+    log('Transaction signed');
 
-  log('Spell TX...');
-  const spellTxId = await broadcastTx(signedSpell);
-  log(`✓ ${spellTxId}`);
+    log('Broadcasting...');
+    const txId = await broadcastTx(signedTx);
+    log(`✓ ${txId}`);
+
+    // For combined tx, commit and spell are the same
+    var commitTxId = txId;
+    var spellTxId = txId;
+  } else {
+    // Traditional two-transaction flow
+    const signedCommit = await signTransaction(commitTx, wallet, 0, feePrevTx, feeUtxo.vout);
+    log('Commit TX signed');
+    const signedSpell = await signTransaction(spellTx, wallet, 0, collateralPrevTx, collateralUtxo.vout);
+    log('Spell TX signed');
+
+    log('Broadcasting Commit TX...');
+    var commitTxId = await broadcastTx(signedCommit);
+    log(`✓ ${commitTxId}`);
+
+    log('Waiting 5s for propagation...');
+    await new Promise(r => setTimeout(r, 5000));
+
+    log('Broadcasting Spell TX...');
+    var spellTxId = await broadcastTx(signedSpell);
+    log(`✓ ${spellTxId}`);
+  }
 
   // 10. Calculate App ID
   const appId = crypto.createHash('sha256')

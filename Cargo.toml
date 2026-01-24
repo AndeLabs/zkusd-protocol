@@ -16,10 +16,10 @@ authors = ["zkUSD Team"]
 repository = "https://github.com/zkusd/zkusd-protocol"
 
 [workspace.dependencies]
-# Charms SDK for Bitcoin ZK apps - v0.12 from main branch
-# Includes fix for coin_ins population (PR #151) and protocol v10
-charms-sdk = { git = "https://github.com/CharmsDev/charms", branch = "main" }
-charms-data = { git = "https://github.com/CharmsDev/charms", branch = "main" }
+# Charms SDK for Bitcoin ZK apps - v0.11.1 (matches CLI version)
+# Using tag for stability and reproducibility
+charms-sdk = { git = "https://github.com/CharmsDev/charms", tag = "v0.11.1" }
+charms-data = { git = "https://github.com/CharmsDev/charms", tag = "v0.11.1" }
 
 # Serialization
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }

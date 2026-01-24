@@ -233,11 +233,24 @@ pub fn validate_stability_operation(
 // ============ Parsing Functions ============
 
 /// Parse witness data to check if it's an Initialize operation
+/// Supports both struct format and simple string (UTXO ID) format
 fn parse_init_witness(w: &Data) -> Option<InitWitness> {
+    // Try parsing as InitWitness struct first
     if let Ok(init) = w.value::<InitWitness>() {
         if init.op == op::INITIALIZE {
             return Some(init);
         }
+    }
+    // Try parsing as simple string (Charms template pattern)
+    // For initialization, we derive parameters from output charm instead
+    if w.value::<String>().is_ok() {
+        // Return a placeholder InitWitness - actual values come from output charm
+        return Some(InitWitness {
+            op: op::INITIALIZE,
+            zkusd_token_id: [0u8; 32],
+            vault_manager_id: [0u8; 32],
+            admin: [0u8; 32],
+        });
     }
     None
 }
@@ -248,15 +261,35 @@ fn validate_initialize(
     output_state: &StabilityPoolState,
     init: &InitWitness,
 ) -> bool {
-    // Verify config matches initialization parameters
-    if output_config.zkusd_token_id != init.zkusd_token_id {
-        return false;
+    // If witness has placeholder values (from string pattern), only validate output state
+    // Otherwise verify config matches initialization parameters
+    let is_placeholder_witness = init.zkusd_token_id == [0u8; 32]
+        && init.vault_manager_id == [0u8; 32]
+        && init.admin == [0u8; 32];
+
+    if !is_placeholder_witness {
+        // Full validation with witness parameters
+        if output_config.zkusd_token_id != init.zkusd_token_id {
+            return false;
+        }
+        if output_config.vault_manager_id != init.vault_manager_id {
+            return false;
+        }
+        if output_config.admin != init.admin {
+            return false;
+        }
     }
-    if output_config.vault_manager_id != init.vault_manager_id {
-        return false;
-    }
-    if output_config.admin != init.admin {
-        return false;
+    // For placeholder witness, just validate output config is not all zeros
+    else {
+        if output_config.zkusd_token_id == [0u8; 32] {
+            return false;
+        }
+        if output_config.vault_manager_id == [0u8; 32] {
+            return false;
+        }
+        if output_config.admin == [0u8; 32] {
+            return false;
+        }
     }
     // Verify initial state is valid
     if output_state.total_zkusd != 0 {
@@ -281,8 +314,9 @@ fn validate_initialize(
     if output_state.depositor_count != 0 {
         return false;
     }
-    // Admin cannot be zero address
-    if init.admin == [0u8; 32] {
+    // Admin validation: for non-placeholder witnesses, admin cannot be zero
+    // For placeholder witnesses, admin is always [0;32] so we skip this check
+    if !is_placeholder_witness && init.admin == [0u8; 32] {
         return false;
     }
     true
@@ -293,24 +327,59 @@ fn extract_output_config_and_state(
     app: &App,
     tx: &Transaction,
 ) -> Option<(StabilityPoolConfig, StabilityPoolState)> {
-    // For Initialize, we only need the output state
-    // Look for combined config+state structure or separate fields
+    // For Initialize, we need the output state
+    // Support both: nested structure and flat structure
     for charms in tx.outs.iter() {
         if let Some(data) = charms.get(app) {
-            // Try to deserialize as a combined structure
+            // Try nested structure first
             if let Ok(combined) = data.value::<StabilityPoolOutput>() {
                 return Some((combined.config, combined.state));
+            }
+            // Try flat structure (all fields at same level)
+            if let Ok(flat) = data.value::<StabilityPoolFlat>() {
+                let config = StabilityPoolConfig {
+                    zkusd_token_id: flat.zkusd_token_id,
+                    vault_manager_id: flat.vault_manager_id,
+                    admin: flat.admin,
+                };
+                let state = StabilityPoolState {
+                    total_zkusd: flat.total_zkusd,
+                    total_btc: flat.total_btc,
+                    product_p: flat.product_p,
+                    sum_s: flat.sum_s,
+                    current_epoch: flat.current_epoch,
+                    current_scale: flat.current_scale,
+                    depositor_count: flat.depositor_count,
+                };
+                return Some((config, state));
             }
         }
     }
     None
 }
 
-/// Combined output structure for stability pool charm
+/// Combined output structure for stability pool charm (nested)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct StabilityPoolOutput {
     pub config: StabilityPoolConfig,
     pub state: StabilityPoolState,
+}
+
+/// Flat output structure for stability pool charm (all fields at same level)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct StabilityPoolFlat {
+    // Config fields
+    pub zkusd_token_id: [u8; 32],
+    pub vault_manager_id: [u8; 32],
+    pub admin: [u8; 32],
+    // State fields
+    pub total_zkusd: u64,
+    pub total_btc: u64,
+    pub product_p: u128,
+    pub sum_s: u128,
+    pub current_epoch: u64,
+    pub current_scale: u64,
+    pub depositor_count: u64,
 }
 
 /// Parse witness data into StabilityWitness

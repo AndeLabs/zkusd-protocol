@@ -1,17 +1,15 @@
 // Testnet4 Deployment Configuration
 // Generated from deployments/testnet4/deployment-config.json
 //
-// STATUS: V5 - VaultManager with Charms v8 compatibility fixes
-// VaultManager updated 2026-01-23 with:
-//   - btc_inputs check fix (from V4)
-//   - validate_close_vault Charms v8 fix
-//   - Liquidation safe_sub to prevent underflow
+// STATUS: V5 - StabilityPool DEPLOYED 2026-01-24
+// - StabilityPool deployed with Charms v0.11.1 SDK
+// - VaultManager pending deployment
 //
-// Current WASM VKs (from compiled binaries):
+// Current WASM VKs (from compiled binaries with Charms v0.11.1):
 //   price-oracle:    98b2eeeb37501c9f6f815913c80935bd46b9328512570ef067c3d02379f4c73d
 //   zkusd-token:     ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
-//   vault-manager:   8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42 (V5 - full Charms v8 compat)
-//   stability-pool:  98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9
+//   vault-manager:   8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42 (pending)
+//   stability-pool:  54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143 (DEPLOYED)
 
 import type { NetworkDeployment } from './networks';
 
@@ -24,7 +22,8 @@ export const TESTNET4_VKS = {
   zkusdToken: 'ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128',
   // V5 VK - pending deployment (close_vault fix + liquidation safe_sub)
   vaultManager: '8b3834c2f233d1abc6b1473833f4addd113873e21624a6ddf419406c09e1fa42',
-  stabilityPool: '98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9',
+  // V5 VK - deployed 2026-01-24
+  stabilityPool: '54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143',
 };
 
 export const TESTNET4_CONFIG: NetworkDeployment = {
@@ -67,12 +66,13 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
       wasmPath: '/wasm/zkusd-vault-manager-app.wasm',
     },
     stabilityPool: {
-      appId: '001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b',
-      vk: '98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9',
-      appRef: 'n/001537495ecc1bc1e19892052ece990bcbcf301a043e5ce1019680d721a5dc6b/98ef9f08108227ab28aab842a9370cb0ec0e289b8dba21a319ec106927ea08e9',
-      spellTx: '20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c',
-      stateUtxo: '20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c:0',
-      status: 'pending',
+      // V5 - Deployed 2026-01-24 with Charms v0.11.1 SDK
+      appId: 'b9412ca5d8ed6ca34d5b316ca51c960c8bc69aa96de467c9e4eb7bbfab24e320',
+      vk: '54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143',
+      appRef: 'n/b9412ca5d8ed6ca34d5b316ca51c960c8bc69aa96de467c9e4eb7bbfab24e320/54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143',
+      spellTx: '678046c4a16e1dfd4cc7686c30f2c6fbda3350ce21380611c23aba922013bb30',
+      stateUtxo: '678046c4a16e1dfd4cc7686c30f2c6fbda3350ce21380611c23aba922013bb30:0',
+      status: 'confirmed',
       wasmPath: '/wasm/zkusd-stability-pool-app.wasm',
     },
   },
@@ -99,8 +99,8 @@ export const TESTNET4_CROSS_REFS = {
   tokenAuthorizedMinter: [202, 138, 178, 220, 48, 201, 123, 123, 225, 214, 233, 23, 92, 51, 248, 40, 170, 196, 71, 145, 127, 245, 96, 95, 202, 15, 243, 172, 255, 203, 31, 169],
   // VaultManager.zkusd_token_id = Token App ID
   vmTokenId: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241],
-  // VaultManager.stability_pool_id = StabilityPool App ID
-  vmStabilityPoolId: [0, 21, 55, 73, 94, 204, 27, 193, 225, 152, 146, 5, 46, 206, 153, 11, 203, 207, 48, 26, 4, 62, 92, 225, 1, 150, 128, 215, 33, 165, 220, 107],
+  // VaultManager.stability_pool_id = StabilityPool App ID (V5 - 2026-01-24)
+  vmStabilityPoolId: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32],
   // VaultManager.oracle_id = PriceOracle App ID
   vmOracleId: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181],
   // StabilityPool.zkusd_token_id = Token App ID
