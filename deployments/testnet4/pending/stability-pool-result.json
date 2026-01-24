@@ -1,0 +1,13 @@
+{
+  "contract": "stability-pool",
+  "version": "V5",
+  "network": "testnet4",
+  "deployed_at": "2026-01-24T10:50:26.010Z",
+  "appId": "b9412ca5d8ed6ca34d5b316ca51c960c8bc69aa96de467c9e4eb7bbfab24e320",
+  "vk": "54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143",
+  "appRef": "n/b9412ca5d8ed6ca34d5b316ca51c960c8bc69aa96de467c9e4eb7bbfab24e320/54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143",
+  "commitTxId": "678046c4a16e1dfd4cc7686c30f2c6fbda3350ce21380611c23aba922013bb30",
+  "spellTxId": "678046c4a16e1dfd4cc7686c30f2c6fbda3350ce21380611c23aba922013bb30",
+  "stateUtxo": "678046c4a16e1dfd4cc7686c30f2c6fbda3350ce21380611c23aba922013bb30:0",
+  "explorer": "https://mempool.space/testnet4/tx/678046c4a16e1dfd4cc7686c30f2c6fbda3350ce21380611c23aba922013bb30"
+}
