@@ -15,3 +15,11 @@ export {
 } from './skeleton';
 export { Tooltip, type TooltipProps } from './tooltip';
 export { ErrorBoundary } from './error-boundary';
+
+// Demo Mode Components
+export {
+  DemoIndicator,
+  DemoModeBanner,
+  DemoToggleButton,
+  useDemoKeyboardShortcut,
+} from './demo-indicator';

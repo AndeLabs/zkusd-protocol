@@ -3,3 +3,9 @@ export { useOpenVault, type OpenVaultParams, type OpenVaultResult } from './use-
 export { useAdjustVault, type AdjustVaultParams, type AdjustVaultResult } from './use-adjust-vault';
 export { useCloseVault, type CloseVaultParams, type CloseVaultResult } from './use-close-vault';
 export { useUserVaults } from './use-user-vaults';
+export {
+  useOpenVaultDemo,
+  useOpenVaultWithDemo,
+  type OpenVaultDemoParams,
+  type OpenVaultDemoResult,
+} from './use-open-vault-demo';

@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge } from '@/components/ui';
+import { Badge, DemoModeBanner } from '@/components/ui';
 import { ConnectButton } from '@/components/wallet/connect-button';
 import { usePrice } from '@/hooks/use-price';
 import { formatUSD } from '@/lib/utils';
@@ -15,6 +15,7 @@ export function Header() {
       role="banner"
       className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md"
     >
+      <DemoModeBanner />
       <nav aria-label="Main navigation" className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

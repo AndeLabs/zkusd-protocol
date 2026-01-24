@@ -2,9 +2,10 @@
 
 import { Button, ICRBadge, Input, MaxButton } from '@/components/ui';
 import { WalletPreparation, UtxoStatus } from '@/components/wallet';
-import { useOpenVault, useVaultMetrics } from '@/features/vault';
+import { useOpenVault, useOpenVaultDemo, useVaultMetrics } from '@/features/vault';
 import { usePrice } from '@/hooks/use-price';
 import { PROTOCOL } from '@/lib/constants';
+import { isDemoMode } from '@/lib/services';
 import { formatBTC, formatUSD, formatZkUSD } from '@/lib/utils';
 import { useWallet } from '@/stores/wallet';
 import { motion } from 'framer-motion';
@@ -13,6 +14,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 export function OpenVaultForm() {
   const { isConnected, balance, connect } = useWallet();
   const { data: priceData } = usePrice();
+
+  // Demo mode detection - checked once on mount for hook selection
+  const [isDemo, setIsDemo] = useState(false);
+  useEffect(() => {
+    setIsDemo(isDemoMode());
+  }, []);
+
+  // Call both hooks (React requires unconditional hook calls)
+  const realVault = useOpenVault();
+  const demoVault = useOpenVaultDemo();
+
+  // Select the appropriate hook based on demo mode
   const {
     openVault,
     isLoading: isSubmitting,
@@ -24,7 +37,7 @@ export function OpenVaultForm() {
     progress,
     getTimeUntilAvailable,
     reset,
-  } = useOpenVault();
+  } = isDemo ? demoVault : realVault;
 
   // Show preparation view instead of error
   const [showPreparation, setShowPreparation] = useState(false);

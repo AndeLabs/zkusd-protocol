@@ -4,10 +4,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 import { Toaster } from 'sonner';
 
-import { ErrorBoundary } from '@/components/ui';
+import { ErrorBoundary, DemoIndicator, useDemoKeyboardShortcut } from '@/components/ui';
 
 interface ProvidersProps {
   children: ReactNode;
+}
+
+function DemoKeyboardHandler() {
+  useDemoKeyboardShortcut();
+  return null;
 }
 
 export function Providers({ children }: ProvidersProps) {
@@ -27,6 +32,8 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>{children}</ErrorBoundary>
+      <DemoIndicator />
+      <DemoKeyboardHandler />
       <Toaster
         position="bottom-right"
         theme="dark"

@@ -46,3 +46,17 @@ export {
   type VaultResult,
   type ErrorType,
 } from './vault-state-machine';
+
+// Demo Service
+export {
+  isDemoMode,
+  enableDemoMode,
+  disableDemoMode,
+  toggleDemoMode,
+  executeDemoFlow,
+  selectDemoUtxos,
+  getDemoSteps,
+  type DemoConfig,
+  type DemoStep,
+  type DemoResult,
+} from './demo-service';
