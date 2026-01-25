@@ -24,33 +24,36 @@ describe('VaultService Spell Builders', () => {
       });
 
       // Verify spell structure
+      // Now has 4 apps: $00=VM, $01=token fungible, $02=oracle, $03=token NFT
       expect(spell.version).toBe(9);
-      expect(Object.keys(spell.apps)).toHaveLength(2);
+      expect(Object.keys(spell.apps)).toHaveLength(4);
       expect(spell.ins).toHaveLength(1);
-      expect(spell.outs).toHaveLength(3);
+      expect(spell.outs).toHaveLength(5); // VM state, Vault NFT, zkUSD tokens, Token state NFT, Change
 
       // Verify app references use correct format
       expect(spell.apps['$00']).toMatch(/^n\//); // Vault Manager NFT
       expect(spell.apps['$01']).toMatch(/^t\//); // Token fungible
+      expect(spell.apps['$02']).toMatch(/^n\//); // Oracle NFT
+      expect(spell.apps['$03']).toMatch(/^n\//); // Token state NFT
 
       // Verify input
       expect(spell.ins[0].utxo).toBe('abc123def456789abc123def456789abc123def456789abc123def456789abcd:0');
       expect(spell.ins[0].charms).toEqual({});
 
       // Verify outputs
-      // Output 1: Vault NFT
-      expect(spell.outs[0].address).toBe('tb1qtest123');
+      // Output 0: Updated VaultManagerState
       expect(spell.outs[0].charms['$00']).toBeDefined();
-      expect(spell.outs[0].charms['$00'].collateral).toBe(10000000);
-      expect(spell.outs[0].charms['$00'].status).toBe(0); // Active
+      expect(spell.outs[0].charms['$00'].protocol).toBeDefined();
+
+      // Output 1: Vault NFT
+      expect(spell.outs[1].address).toBe('tb1qtest123');
+      expect(spell.outs[1].charms['$00']).toBeDefined();
+      expect(spell.outs[1].charms['$00'].collateral).toBe(10000000);
+      expect(spell.outs[1].charms['$00'].status).toBe('Active'); // Now string enum
 
       // Output 2: zkUSD tokens
-      expect(spell.outs[1].address).toBe('tb1qtest123');
-      expect(spell.outs[1].charms['$01']).toBeDefined();
-
-      // Output 3: Change
       expect(spell.outs[2].address).toBe('tb1qtest123');
-      expect(spell.outs[2].charms).toEqual({});
+      expect(spell.outs[2].charms['$01']).toBeDefined();
     });
 
     it('should include correct vault state fields', async () => {
@@ -66,15 +69,16 @@ describe('VaultService Spell Builders', () => {
         interestRateBps: 150, // 1.5% APR
       });
 
-      const vaultState = spell.outs[0].charms['$00'];
+      // Vault NFT is now at output index 1 (after VaultManagerState)
+      const vaultState = spell.outs[1].charms['$00'];
 
       // Verify all vault state fields
       expect(vaultState.id).toBeDefined();
-      expect(vaultState.owner).toBe('03pubkey');
+      expect(Array.isArray(vaultState.owner)).toBe(true); // Now byte array
       expect(vaultState.collateral).toBe(50000000);
       expect(vaultState.created_at).toBe(115000);
       expect(vaultState.last_updated).toBe(115000);
-      expect(vaultState.status).toBe(0);
+      expect(vaultState.status).toBe('Active'); // Now string enum
       expect(vaultState.interest_rate_bps).toBe(150);
       expect(vaultState.accrued_interest).toBe(0);
       expect(vaultState.redistributed_debt).toBe(0);

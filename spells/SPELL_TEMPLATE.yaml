@@ -19,7 +19,7 @@
 # See: docs/CHARMS_DEPLOYMENT_FIX.md for full explanation
 # ============================================================================
 
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # Format: n/{app_id}/{vk}

@@ -4,7 +4,7 @@
 # UTXO Model: Consume input UTXO, create output UTXOs
 # No approval mechanism needed - UTXO ownership is direct
 #
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # zkUSD Token

@@ -4,7 +4,7 @@
 # UTXO Advantage: All adjustments happen atomically
 # No partial state - either all changes apply or none
 #
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # Vault Manager NFT

@@ -10,7 +10,7 @@
 # Reference: https://docs.makerdao.com/smart-contract-modules/dog-and-clipper-detailed-documentation
 # Reference: https://www.liquity.org/blog/comparison-series-liquity-protocol-vs-makerdao-pt-2
 #
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # Vault Manager NFT

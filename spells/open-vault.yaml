@@ -4,7 +4,7 @@
 # Based on Liquity V2 pattern: Vaults (Troves) as NFTs
 # Reference: https://docs.liquity.org/v2-faq/borrowing-and-liquidations
 #
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # Vault Manager as NFT: n/{app_id}/{vk}

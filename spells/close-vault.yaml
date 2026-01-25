@@ -4,7 +4,7 @@
 # Requires: Sufficient zkUSD to repay entire debt + accrued interest
 # Result: Vault NFT is consumed (burned), collateral returned
 #
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # Vault Manager NFT

@@ -7,7 +7,7 @@
 # UTXO Advantage: Atomic redemption with multiple vaults in single spell
 # Redeemer pays: Redemption fee (0.5% base + dynamic component)
 #
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # Vault Manager NFT

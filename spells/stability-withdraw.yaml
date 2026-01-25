@@ -7,7 +7,7 @@
 #
 # Reference: https://github.com/liquity/dev/blob/main/packages/contracts/contracts/StabilityPool.sol
 #
-version: 8
+version: 9  # Charms v0.11.1
 
 apps:
   # zkUSD Token

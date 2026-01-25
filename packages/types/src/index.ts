@@ -168,7 +168,7 @@ export interface CharmApp {
 }
 
 export interface SpellInput {
-  utxoId: string;
+  utxo: string;  // "txid:vout" format - matches Charms API (transformed to utxo_id by prover)
   charms: Record<string, unknown>;
 }
 

@@ -1,13 +1,19 @@
 // Spell Builder - Generate YAML spells for zkUSD operations
 
-import type { SpellInput, SpellOutput, CharmApp } from '@zkusd/types';
+import type { SpellOutput, CharmApp } from '@zkusd/types';
 import { hexToBytes } from '@zkusd/utils';
+
+interface SpellInputInternal {
+  utxo: string;  // "txid:vout" format
+  charms: Record<string, unknown>;
+}
 
 interface SpellConfig {
   version: number;
   apps: Record<string, string>;
+  publicInputs: Record<string, Record<string, unknown>>;
   privateInputs: Record<string, Record<string, unknown>>;
-  ins: SpellInput[];
+  ins: SpellInputInternal[];
   outs: SpellOutput[];
 }
 
@@ -21,6 +27,7 @@ export class SpellBuilder {
     this.config = {
       version: 9, // Charms v0.11.1 requires version 9
       apps: {},
+      publicInputs: {},
       privateInputs: {},
       ins: [],
       outs: [],
@@ -44,7 +51,15 @@ export class SpellBuilder {
   }
 
   /**
-   * Add private inputs for an app
+   * Add public inputs for an app (recorded on-chain)
+   */
+  addPublicInput(appName: string, inputs: Record<string, unknown>): this {
+    this.config.publicInputs[appName] = inputs;
+    return this;
+  }
+
+  /**
+   * Add private inputs for an app (witness data, NOT recorded on-chain)
    */
   addPrivateInput(appName: string, inputs: Record<string, unknown>): this {
     this.config.privateInputs[appName] = inputs;
@@ -54,8 +69,8 @@ export class SpellBuilder {
   /**
    * Add an input UTXO
    */
-  addInput(utxoId: string, charms: Record<string, unknown> = {}): this {
-    this.config.ins.push({ utxoId, charms });
+  addInput(utxo: string, charms: Record<string, unknown> = {}): this {
+    this.config.ins.push({ utxo, charms });
     return this;
   }
 
@@ -86,7 +101,19 @@ export class SpellBuilder {
       lines.push('');
     }
 
-    // Private inputs
+    // Public inputs (recorded on-chain)
+    if (Object.keys(this.config.publicInputs).length > 0) {
+      lines.push('public_inputs:');
+      for (const [appName, inputs] of Object.entries(this.config.publicInputs)) {
+        lines.push(`  ${appName}:`);
+        for (const [key, value] of Object.entries(inputs)) {
+          lines.push(`    ${key}: ${this.formatValue(value)}`);
+        }
+      }
+      lines.push('');
+    }
+
+    // Private inputs (witness data, NOT recorded on-chain)
     if (Object.keys(this.config.privateInputs).length > 0) {
       lines.push('private_inputs:');
       for (const [appName, inputs] of Object.entries(this.config.privateInputs)) {
@@ -102,7 +129,7 @@ export class SpellBuilder {
     if (this.config.ins.length > 0) {
       lines.push('ins:');
       for (const input of this.config.ins) {
-        lines.push(`  - utxo_id: ${input.utxoId}`);
+        lines.push(`  - utxo_id: "${input.utxo}"`);
         lines.push(`    charms: ${this.formatCharms(input.charms)}`);
       }
       lines.push('');

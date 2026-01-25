@@ -641,11 +641,32 @@ export class VaultService {
       charms: {},
     });
 
+    // Operation code for AdjustVault
+    const ADJUST_VAULT_OP = 17; // 0x11
+
     const spell: Spell = {
       version: SPELL_VERSION,
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,
+      },
+      // Private inputs with witness structs
+      private_inputs: {
+        // VaultManager witness for AdjustVault operation
+        '$00': {
+          op: ADJUST_VAULT_OP,
+          vault_id: hexToBytes(params.vaultState.id, 32),
+          collateral: safeToNumber(params.collateralChange, 'collateralChange'),
+          debt: safeToNumber(params.debtChange, 'debtChange'),
+          // Advanced operation fields (not used for adjust)
+          flash_purpose: null,
+          rescuer_discount: null,
+          coverage: null,
+          premium: null,
+          trigger_icr: null,
+          insurance_id: null,
+          new_owner: null,
+        },
       },
       ins: inputs,
       outs: outputs,
@@ -691,11 +712,32 @@ export class VaultService {
       ? params.zkusdAmount - vaultDebt
       : 0n;
 
+    // Operation code for CloseVault
+    const CLOSE_VAULT_OP = 18; // 0x12
+
     const spell: Spell = {
       version: SPELL_VERSION,
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,
+      },
+      // Private inputs with witness structs
+      private_inputs: {
+        // VaultManager witness for CloseVault operation
+        '$00': {
+          op: CLOSE_VAULT_OP,
+          vault_id: hexToBytes(params.vaultState.id, 32),
+          collateral: 0,  // Not changing collateral amount
+          debt: safeToNumber(vaultDebt, 'vaultDebt'),  // Total debt being repaid
+          // Advanced operation fields (not used for close)
+          flash_purpose: null,
+          rescuer_discount: null,
+          coverage: null,
+          premium: null,
+          trigger_icr: null,
+          insurance_id: null,
+          new_owner: null,
+        },
       },
       ins: [
         // Input 1: Vault NFT to close
