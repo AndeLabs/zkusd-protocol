@@ -17,13 +17,14 @@ export const NETWORKS = {
     name: 'Testnet4',
     explorerUrl: 'https://mempool.space/testnet4',
     explorerApiUrl: 'https://mempool.space/testnet4/api',
-    charmsProverUrl: 'https://v8.charms.dev/spells/prove',
+    // v9 prover for Charms v0.11.1 (spell version 9)
+    charmsProverUrl: 'https://v9.charms.dev/spells/prove',
   },
   mainnet: {
     name: 'Mainnet',
     explorerUrl: 'https://mempool.space',
     explorerApiUrl: 'https://mempool.space/api',
-    charmsProverUrl: 'https://v8.charms.dev/spells/prove',
+    charmsProverUrl: 'https://v9.charms.dev/spells/prove',
   },
 } as const;
 

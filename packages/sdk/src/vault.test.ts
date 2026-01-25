@@ -24,7 +24,7 @@ describe('VaultService Spell Builders', () => {
       });
 
       // Verify spell structure
-      expect(spell.version).toBe(8);
+      expect(spell.version).toBe(9);
       expect(Object.keys(spell.apps)).toHaveLength(2);
       expect(spell.ins).toHaveLength(1);
       expect(spell.outs).toHaveLength(3);

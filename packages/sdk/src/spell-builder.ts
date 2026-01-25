@@ -19,7 +19,7 @@ export class SpellBuilder {
 
   constructor() {
     this.config = {
-      version: 8,
+      version: 9, // Charms v0.11.1 requires version 9
       apps: {},
       privateInputs: {},
       ins: [],

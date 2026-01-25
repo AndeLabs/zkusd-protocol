@@ -9,6 +9,9 @@ import type {
 import type { ZkUsdClient } from './client';
 import type { Spell, SpellInput, SpellOutput } from './services';
 
+/** Charms spell version (v9 for Charms v0.11.1) */
+const SPELL_VERSION = 9;
+
 /**
  * Service for managing stability pool operations
  */
@@ -130,7 +133,7 @@ export class StabilityPoolService {
     ];
 
     const spell: Spell = {
-      version: 8,
+      version: SPELL_VERSION,
       apps: {
         '$00': spAppRef,
         '$01': tokenAppRef,
@@ -223,7 +226,7 @@ export class StabilityPoolService {
     });
 
     const spell: Spell = {
-      version: 8,
+      version: SPELL_VERSION,
       apps: {
         '$00': spAppRef,
         '$01': tokenAppRef,
@@ -287,7 +290,7 @@ export class StabilityPoolService {
     ];
 
     const spell: Spell = {
-      version: 8,
+      version: SPELL_VERSION,
       apps: {
         '$00': spAppRef,
       },

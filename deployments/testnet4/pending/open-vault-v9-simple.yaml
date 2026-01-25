@@ -1,0 +1,86 @@
+# ============================================================================
+# Open Vault Spell V9 - SIMPLIFIED (VaultManager only, no token mint)
+# ============================================================================
+# Testing just the VaultManager V2 state update without token minting
+# ============================================================================
+
+version: 9
+
+apps:
+  # VaultManager V2 only
+  a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d: n/d93540abec20ae20159f9f4de685975f17ad68004b970ae765d71bad42103649/a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d
+
+private_inputs:
+  a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+    op: 16
+    vault_id: [154, 35, 163, 63, 38, 28, 137, 172, 1, 173, 214, 125, 37, 155, 53, 187, 188, 248, 235, 255, 55, 146, 220, 64, 250, 94, 0, 199, 6, 115, 176, 247]
+    collateral: 500000
+    debt: 1000000000
+
+public_inputs:
+  a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+    price: 10000000000000
+    timestamp_block: 120133
+    source: Mock
+    confidence: 100
+
+ins:
+  # VaultManager V2 state UTXO
+  - utxo_id: "8a7cf69a3372e9811e7a71d60cc1a347a76dd6f6d5b3018011a9e423c633bbd8:0"
+    charms:
+      a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+        protocol:
+          total_collateral: 0
+          total_debt: 0
+          active_vault_count: 0
+          base_rate: 50
+          last_fee_update_block: 0
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+  # Collateral UTXO (0.005 BTC = 500,000 sats)
+  - utxo_id: "c7f436f44d97a8c67713e9cfecbd0f63222f8c6f1b6dc8af74cac860bf54e907:0"
+    charms: {}
+
+outs:
+  # Output 0: Updated VaultManager state
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+        protocol:
+          total_collateral: 500000
+          total_debt: 1200000000
+          active_vault_count: 1
+          base_rate: 50
+          last_fee_update_block: 120133
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+  # Output 1: New Vault
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+        id: [154, 35, 163, 63, 38, 28, 137, 172, 1, 173, 214, 125, 37, 155, 53, 187, 188, 248, 235, 255, 55, 146, 220, 64, 250, 94, 0, 199, 6, 115, 176, 247]
+        # SHA256 of compressed pubkey 035931eede5d66e1f329f9e9e1dbbb40c69b03071e4961418c6aa99383fcf2f283
+        owner: [82, 145, 49, 238, 222, 93, 102, 225, 243, 41, 249, 233, 225, 219, 187, 64, 198, 155, 3, 7, 30, 73, 97, 65, 140, 106, 169, 147, 131, 252, 242, 242]
+        collateral: 500000
+        debt: 1200000000
+        created_at: 120133
+        last_updated: 120133
+        status: Active
+        interest_rate_bps: 100
+        accrued_interest: 0
+        redistributed_debt: 0
+        redistributed_collateral: 0
+        insurance_balance: 0
+  # Output 2: Change (remaining BTC from collateral UTXO)
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms: {}

@@ -70,12 +70,14 @@ export interface ProverEndpoint {
 
 export const PROVER_ENDPOINTS: Record<NetworkId, ProverEndpoint[]> = {
   testnet4: [
-    { url: 'https://v8.charms.dev/spells/prove', priority: 1 },
-    // Add backup endpoints here when available
+    // v9 prover for Charms v0.11.1 (spell version 9)
+    { url: 'https://v9.charms.dev/spells/prove', priority: 1 },
+    // Fallback to v8 (only works with version 8 spells)
+    { url: 'https://v8.charms.dev/spells/prove', priority: 2 },
   ],
   mainnet: [
-    { url: 'https://v8.charms.dev/spells/prove', priority: 1 },
-    // Add backup endpoints here when available
+    { url: 'https://v9.charms.dev/spells/prove', priority: 1 },
+    { url: 'https://v8.charms.dev/spells/prove', priority: 2 },
   ],
 };
 

@@ -28,8 +28,8 @@ import type { Spell, SpellInput, SpellOutput } from './services';
 // Constants
 // ============================================================================
 
-/** Charms spell version */
-const SPELL_VERSION = 8;
+/** Charms spell version (v9 for Charms v0.11.1) */
+const SPELL_VERSION = 9;
 
 /** Default interest rate in basis points (1% = 100 bps) */
 const DEFAULT_INTEREST_RATE_BPS = 100;
@@ -642,7 +642,7 @@ export class VaultService {
     });
 
     const spell: Spell = {
-      version: 8,
+      version: SPELL_VERSION,
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,
@@ -692,7 +692,7 @@ export class VaultService {
       : 0n;
 
     const spell: Spell = {
-      version: 8,
+      version: SPELL_VERSION,
       apps: {
         '$00': vmAppRef,
         '$01': tokenAppRef,

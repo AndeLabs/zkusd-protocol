@@ -87,7 +87,7 @@ describe('StabilityPoolService', () => {
       });
 
       // Verify spell structure
-      expect(spell.version).toBe(8);
+      expect(spell.version).toBe(9);
       expect(Object.keys(spell.apps)).toHaveLength(2);
       expect(spell.ins).toHaveLength(1);
       expect(spell.outs).toHaveLength(2);
@@ -150,7 +150,7 @@ describe('StabilityPoolService', () => {
         depositorAddress: 'tb1qdepositor',
       });
 
-      expect(spell.version).toBe(8);
+      expect(spell.version).toBe(9);
       expect(spell.ins).toHaveLength(1);
 
       // Verify input includes deposit state
@@ -210,7 +210,7 @@ describe('StabilityPoolService', () => {
         depositorAddress: 'tb1qclaimer',
       });
 
-      expect(spell.version).toBe(8);
+      expect(spell.version).toBe(9);
       expect(spell.ins).toHaveLength(1);
 
       // Input should have deposit with gains

@@ -75,10 +75,11 @@ export interface ProverConfig {
 // ============================================================================
 
 // Fallback URLs if config package doesn't provide endpoints
+// v9 prover for Charms v0.11.1 (spell version 9)
 const FALLBACK_PROVER_URLS: Record<Network, string[]> = {
-  mainnet: ['https://v8.charms.dev/spells/prove'],
-  testnet4: ['https://v8.charms.dev/spells/prove'],
-  signet: ['https://v8.charms.dev/spells/prove'],
+  mainnet: ['https://v9.charms.dev/spells/prove', 'https://v8.charms.dev/spells/prove'],
+  testnet4: ['https://v9.charms.dev/spells/prove', 'https://v8.charms.dev/spells/prove'],
+  signet: ['https://v9.charms.dev/spells/prove'],
   regtest: ['http://localhost:17784/spells/prove'],
 };
 
