@@ -436,6 +436,18 @@ fn witness_to_action(w: &VaultWitness) -> Option<VaultAction> {
     }
 }
 
+// ============ App Matching ============
+
+/// Match a charm's app by tag and VK (verification key).
+///
+/// Deploy spells create UTXOs with zero identity (`B32([0; 32])`) because
+/// the app_id (`SHA256(commit_txid:vout)`) isn't known at spell creation time.
+/// Post-deploy spells use the real identity. Matching by VK+tag handles both
+/// cases since VK is consistent across the deploy-to-post-deploy transition.
+fn matches_app(charm_app: &App, target_app: &App) -> bool {
+    charm_app.tag == target_app.tag && charm_app.vk == target_app.vk
+}
+
 // ============ State Extraction ============
 
 /// Extract protocol states from transaction
@@ -443,13 +455,12 @@ fn extract_protocol_states(
     app: &App,
     tx: &Transaction,
 ) -> Option<(VaultManagerState, VaultManagerState)> {
-    // Input state from refs or ins - search by tag and identity (VK may differ)
+    // Input state from refs or ins - match by VK+tag to handle deploy identity transition
     let input_state = tx.refs.iter()
         .chain(tx.ins.iter())
         .find_map(|(_, charms)| {
             for (charm_app, data) in charms.iter() {
-                // Match by tag and identity only (VK might differ between deployed and current code)
-                if charm_app.tag == app.tag && charm_app.identity == app.identity {
+                if matches_app(charm_app, app) {
                     if let Ok(state) = data.value::<VaultManagerState>() {
                         return Some(state);
                     }
@@ -458,12 +469,11 @@ fn extract_protocol_states(
             None
         })?;
 
-    // Output state - search by tag and identity
+    // Output state - match by VK+tag
     let output_state = tx.outs.iter()
         .find_map(|charms| {
             for (charm_app, data) in charms.iter() {
-                // Match by tag and identity only
-                if charm_app.tag == app.tag && charm_app.identity == app.identity {
+                if matches_app(charm_app, app) {
                     if let Ok(state) = data.value::<VaultManagerState>() {
                         return Some(state);
                     }
@@ -486,12 +496,11 @@ fn extract_vaults(
         None => return (None, None),
     };
 
-    // Find input vault matching ID - search by tag and identity (VK may differ)
+    // Find input vault matching ID - match by VK+tag for deploy identity transition
     let input_vault = tx.ins.iter()
         .find_map(|(_, charms)| {
             for (charm_app, data) in charms.iter() {
-                // Match by tag and identity only
-                if charm_app.tag == app.tag && charm_app.identity == app.identity {
+                if matches_app(charm_app, app) {
                     if let Ok(v) = data.value::<Vault>() {
                         if v.id == vault_id {
                             return Some(v);
@@ -502,12 +511,11 @@ fn extract_vaults(
             None
         });
 
-    // Find output vault matching ID - search by tag and identity (VK may differ)
+    // Find output vault matching ID - match by VK+tag
     let output_vault = tx.outs.iter()
         .find_map(|charms| {
             for (charm_app, data) in charms.iter() {
-                // Match by tag and identity only
-                if charm_app.tag == app.tag && charm_app.identity == app.identity {
+                if matches_app(charm_app, app) {
                     if let Ok(v) = data.value::<Vault>() {
                         if v.id == vault_id {
                             return Some(v);

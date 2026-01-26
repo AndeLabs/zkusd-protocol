@@ -1,0 +1,48 @@
+# ============================================================================
+# zkUSD Token V5 - Deployment Spell
+# ============================================================================
+# Deploys Token contract with new admin/minter governance pattern.
+#
+# VK: e15397ee6b00bd3a61d2243086441164c5615f114a7c92330996125215bb1873
+#
+# ARCHITECTURE IMPROVEMENTS (V5):
+# - Added admin field for governance
+# - SetMinter operation (op=4) for one-time minter configuration
+# - Pending minter mode (zeros) during bootstrap
+#
+# DEPLOYMENT FLOW:
+# 1. Deploy Token with admin + zero minter (this spell)
+# 2. Deploy VaultManager (gets new app_id)
+# 3. Execute SetMinter spell to configure VaultManager as minter
+# ============================================================================
+# Created: 2026-01-25
+# Network: testnet4
+# ============================================================================
+
+version: 9
+
+apps:
+  # Token State NFT - zeros for app_id (assigned on deployment)
+  $00: n/0000000000000000000000000000000000000000000000000000000000000000/e15397ee6b00bd3a61d2243086441164c5615f114a7c92330996125215bb1873
+
+private_inputs:
+  # Initialize operation (op=0)
+  $00:
+    op: 0
+    # Admin address - can configure minter during bootstrap
+    admin: [15, 239, 114, 232, 40, 108, 13, 216, 213, 221, 86, 158, 147, 4, 51, 195, 34, 51, 13, 51, 134, 80, 173, 193, 170, 10, 69, 2, 211, 90, 23, 72]
+    # Pending minter - will set via SetMinter after VaultManager deploy
+    authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+public_inputs: {}
+
+ins: []
+
+outs:
+  # Output 0: Token State NFT (pending minter configuration)
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $00:
+        admin: [15, 239, 114, 232, 40, 108, 13, 216, 213, 221, 86, 158, 147, 4, 51, 195, 34, 51, 13, 51, 134, 80, 173, 193, 170, 10, 69, 2, 211, 90, 23, 72]
+        authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        total_supply: 0

@@ -7,19 +7,45 @@ import {
   useStabilityPoolState,
   useStabilityPoolWithdraw,
   useUserDeposit,
+  useStabilityPoolStateDemo,
+  useUserDepositDemo,
+  useStabilityPoolDepositDemo,
+  useStabilityPoolWithdrawDemo,
+  useStabilityPoolClaimGainsDemo,
 } from '@/features/stability-pool';
+import { isDemoMode } from '@/lib/services';
 import { formatBTC, formatZkUSD } from '@/lib/utils';
 import { useWallet } from '@/stores/wallet';
 import { motion } from 'framer-motion';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function StabilityPoolForm() {
   const { isConnected, connect } = useWallet();
-  const { data: poolState, isLoading: poolLoading } = useStabilityPoolState();
-  const { data: userDeposit, isLoading: depositLoading } = useUserDeposit();
-  const { deposit, isLoading: depositingLoading } = useStabilityPoolDeposit();
-  const { withdraw, isLoading: withdrawingLoading } = useStabilityPoolWithdraw();
-  const { claimGains, isLoading: claimingLoading } = useStabilityPoolClaimGains();
+
+  // Demo mode detection
+  const [isDemo, setIsDemo] = useState(false);
+  useEffect(() => {
+    setIsDemo(isDemoMode());
+  }, []);
+
+  // Call both hooks (React requires unconditional hook calls)
+  const realPoolState = useStabilityPoolState();
+  const demoPoolState = useStabilityPoolStateDemo();
+  const realUserDeposit = useUserDeposit();
+  const demoUserDeposit = useUserDepositDemo();
+  const realDeposit = useStabilityPoolDeposit();
+  const demoDeposit = useStabilityPoolDepositDemo();
+  const realWithdraw = useStabilityPoolWithdraw();
+  const demoWithdraw = useStabilityPoolWithdrawDemo();
+  const realClaim = useStabilityPoolClaimGains();
+  const demoClaim = useStabilityPoolClaimGainsDemo();
+
+  // Select appropriate hooks based on demo mode
+  const { data: poolState, isLoading: poolLoading } = isDemo ? demoPoolState : realPoolState;
+  const { data: userDeposit, isLoading: depositLoading } = isDemo ? demoUserDeposit : realUserDeposit;
+  const { deposit, isLoading: depositingLoading } = isDemo ? demoDeposit : realDeposit;
+  const { withdraw, isLoading: withdrawingLoading } = isDemo ? demoWithdraw : realWithdraw;
+  const { claimGains, isLoading: claimingLoading } = isDemo ? demoClaim : realClaim;
 
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amountInput, setAmountInput] = useState('');

@@ -1,0 +1,122 @@
+# ============================================================================
+# Mint zkUSD Spell v3 - Open Vault #2 with Token Minting
+# ============================================================================
+# Creates vault #2 and mints zkUSD tokens
+# Includes Token State NFT for proper fungible token validation
+# Uses indexed app references ($00, $01, $02)
+# ============================================================================
+
+version: 9
+
+apps:
+  # $00 = VaultManager V2 (NFT) - controls vault operations
+  $00: n/d93540abec20ae20159f9f4de685975f17ad68004b970ae765d71bad42103649/a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d
+  # $01 = zkUSD Token (fungible) - for minted tokens
+  $01: t/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
+  # $02 = zkUSD Token State (NFT) - required for fungible token validation
+  $02: n/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
+
+private_inputs:
+  # VaultManager witness for OpenVault (op=0x10=16)
+  $00:
+    op: 16
+    vault_id: [171, 35, 199, 142, 85, 67, 210, 178, 224, 156, 89, 67, 244, 112, 89, 45, 156, 78, 123, 34, 67, 89, 201, 12, 98, 145, 167, 89, 234, 112, 178, 56]
+    collateral: 500000
+    debt: 1000000000
+  # Fungible token witness for Mint (op=2)
+  $01:
+    op: 2
+    from: ~
+    to: [82, 145, 49, 238, 222, 93, 102, 225, 243, 41, 249, 233, 225, 219, 187, 64, 198, 155, 3, 7, 30, 73, 97, 65, 140, 106, 169, 147, 131, 252, 242, 242]
+    amount: 990000000
+  # Token state NFT witness for Mint (op=2)
+  $02:
+    op: 2
+    from: ~
+    to: [82, 145, 49, 238, 222, 93, 102, 225, 243, 41, 249, 233, 225, 219, 187, 64, 198, 155, 3, 7, 30, 73, 97, 65, 140, 106, 169, 147, 131, 252, 242, 242]
+    amount: 990000000
+
+public_inputs:
+  # PriceData for VaultManager validation
+  $00:
+    price: 10000000000000
+    timestamp_block: 120165
+    source: Mock
+    confidence: 100
+
+ins:
+  # Input 0: VaultManager V2 state
+  - utxo_id: "d8c6e9e8ce18a792d7584eb78550a52b09c6a774569753d124cfec27835d04f9:0"
+    charms:
+      $00:
+        protocol:
+          total_collateral: 500000
+          total_debt: 1200000000
+          active_vault_count: 1
+          base_rate: 50
+          last_fee_update_block: 120157
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+  # Input 1: Collateral UTXO (0.005 BTC)
+  - utxo_id: "fa1e910b896d1ebed8f3f13cc718f8e2aa5e21804157ba66b4fded21552cd1d3:1"
+    charms: {}
+  # Input 2: Token State NFT (required for fungible token validation)
+  - utxo_id: "6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988:0"
+    charms:
+      $02:
+        # VaultManager app_id is the authorized minter
+        authorized_minter: [217, 53, 64, 171, 236, 32, 174, 32, 21, 159, 159, 77, 230, 133, 151, 95, 23, 173, 104, 0, 75, 151, 10, 231, 101, 215, 27, 173, 66, 16, 54, 73]
+        total_supply: 1200000000
+
+outs:
+  # Output 0: Updated VaultManager state
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      $00:
+        protocol:
+          total_collateral: 1000000
+          total_debt: 2400000000
+          active_vault_count: 2
+          base_rate: 50
+          last_fee_update_block: 120165
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+  # Output 1: New Vault #2 NFT
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      $00:
+        id: [171, 35, 199, 142, 85, 67, 210, 178, 224, 156, 89, 67, 244, 112, 89, 45, 156, 78, 123, 34, 67, 89, 201, 12, 98, 145, 167, 89, 234, 112, 178, 56]
+        owner: [82, 145, 49, 238, 222, 93, 102, 225, 243, 41, 249, 233, 225, 219, 187, 64, 198, 155, 3, 7, 30, 73, 97, 65, 140, 106, 169, 147, 131, 252, 242, 242]
+        collateral: 500000
+        debt: 1200000000
+        created_at: 120165
+        last_updated: 120165
+        status: Active
+        interest_rate_bps: 100
+        accrued_interest: 0
+        redistributed_debt: 0
+        redistributed_collateral: 0
+        insurance_balance: 0
+  # Output 2: Updated Token State NFT (total_supply increased by minted amount)
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $02:
+        authorized_minter: [217, 53, 64, 171, 236, 32, 174, 32, 21, 159, 159, 77, 230, 133, 151, 95, 23, 173, 104, 0, 75, 151, 10, 231, 101, 215, 27, 173, 66, 16, 54, 73]
+        total_supply: 2190000000
+  # Output 3: Minted zkUSD tokens (~9.9 zkUSD)
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      $01: 990000000
+  # Output 4: Change
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms: {}

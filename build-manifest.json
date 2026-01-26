@@ -1,0 +1,10 @@
+{
+  "build_time": "2026-01-25T17:57:32Z",
+  "target": "wasm32-wasip1",
+  "contracts": {
+    "zkusd-price-oracle": {"binary": "zkusd-price-oracle-app","wasm_path": "/Users/munay/dev/zkUSD/target/wasm32-wasip1/release/zkusd-price-oracle-app.wasm","size_bytes": 221712,"vk": "372723f020b5030a53f2f40a5feb9c96c8f80fad19ed0a78b0591e363001175f"},
+    "zkusd-token": {"binary": "zkusd-token-app","wasm_path": "/Users/munay/dev/zkUSD/target/wasm32-wasip1/release/zkusd-token-app.wasm","size_bytes": 234433,"vk": "e15397ee6b00bd3a61d2243086441164c5615f114a7c92330996125215bb1873"},
+    "zkusd-stability-pool": {"binary": "zkusd-stability-pool-app","wasm_path": "/Users/munay/dev/zkUSD/target/wasm32-wasip1/release/zkusd-stability-pool-app.wasm","size_bytes": 231861,"vk": "54f84ff2ed2892b5c580b2f49ee38cf5365f04f69b0dca9f5d6a833802bf6143"},
+    "zkusd-vault-manager": {"binary": "zkusd-vault-manager-app","wasm_path": "/Users/munay/dev/zkUSD/target/wasm32-wasip1/release/zkusd-vault-manager-app.wasm","size_bytes": 247441,"vk": "a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d"}
+  }
+}

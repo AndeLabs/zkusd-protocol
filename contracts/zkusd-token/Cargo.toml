@@ -20,6 +20,9 @@ sha2 = { workspace = true }
 charms-sdk = { workspace = true, optional = true }
 charms-data = { workspace = true, optional = true }
 
+[dev-dependencies]
+ciborium = "0.2.2"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 

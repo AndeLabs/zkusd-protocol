@@ -9,3 +9,13 @@ export {
   type OpenVaultDemoParams,
   type OpenVaultDemoResult,
 } from './use-open-vault-demo';
+export {
+  useAdjustVaultDemo,
+  type AdjustVaultDemoParams,
+  type AdjustVaultDemoResult,
+} from './use-adjust-vault-demo';
+export {
+  useCloseVaultDemo,
+  type CloseVaultDemoParams,
+  type CloseVaultDemoResult,
+} from './use-close-vault-demo';

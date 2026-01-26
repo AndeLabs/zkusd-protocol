@@ -1,7 +1,7 @@
-<![CDATA[# zkUSD Protocol
+# zkUSD Protocol
 
 [![Bitcoin](https://img.shields.io/badge/Bitcoin-Testnet4-orange)](https://mempool.space/testnet4)
-[![Charms](https://img.shields.io/badge/Charms-v8-blue)](https://charms.dev)
+[![Charms](https://img.shields.io/badge/Charms-v9-blue)](https://charms.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 **Bitcoin-native stablecoin protocol powered by zero-knowledge proofs via Charms**
@@ -29,15 +29,19 @@ All contracts are **deployed and operational** on Bitcoin Testnet4:
 
 | Contract | App ID | Status |
 |----------|--------|--------|
-| **Price Oracle** | `26186d7c27bb2874...` | ✅ Live |
-| **zkUSD Token** | `7ff62ba48cbb4e84...` | ✅ Live |
-| **Stability Pool** | `001537495ecc1bc1...` | ✅ Live |
-| **Vault Manager** | `ca8ab2dc30c97b7b...` | ✅ Live |
+| **Price Oracle V2** | `ee779405f88f890c...` | ✅ Live |
+| **zkUSD Token V8** | `a2a55bf313100167...` | ✅ Live |
+| **Stability Pool V5** | `b9412ca5d8ed6ca3...` | ✅ Live |
+| **Vault Manager V6** | `e6564c00d5ea8cb8...` | ✅ Live |
 
 **Explorer Links:**
-- [Token TX](https://mempool.space/testnet4/tx/6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988)
-- [Stability Pool TX](https://mempool.space/testnet4/tx/20d41c6e5b4df501f6394392a56a534730bc84794da1f8adabe5dc6084ee560c)
-- [Vault Manager TX](https://mempool.space/testnet4/tx/aac009d17665311d94ec0accf48aad8db6a06c54cc383bb8933c28eb92b03f02)
+- [Price Oracle Deployment](https://mempool.space/testnet4/tx/68dd47f7f3759262533e2049fe0313bd848657fb7f05875b9b5fb2d325eca3b2)
+- [Token Deployment](https://mempool.space/testnet4/tx/574e778f7dd27ac1985f24b956b926b10190f69c374019ba9aba60a459d8a394)
+- [Stability Pool Deployment](https://mempool.space/testnet4/tx/678046c4a16e1dfd4cc7686c30f2c6fbda3350ce21380611c23aba922013bb30)
+- [Vault Manager Deployment](https://mempool.space/testnet4/tx/eb13f9b9d0ed1eb8160b7e0732ad03ca0473cb3e3ed5e3b7936630e7a4c4d261)
+
+**First zkUSD Minted:**
+- [OpenVault TX - 10 zkUSD minted with 500k sats collateral](https://mempool.space/testnet4/tx/f5a19de4e1297fd681711b912c61dc5514aea2676aafce4737b377267ef6167d)
 
 ---
 
@@ -70,7 +74,7 @@ Create `.env.local` in `apps/web/`:
 ```env
 NEXT_PUBLIC_NETWORK=testnet4
 NEXT_PUBLIC_DEMO_MODE=false
-NEXT_PUBLIC_PROVER_URL=https://v8.charms.dev/spells/prove
+NEXT_PUBLIC_PROVER_URL=https://v9.charms.dev/spells/prove
 ```
 
 ---
@@ -196,7 +200,7 @@ See [contracts/BUILDING.md](./contracts/BUILDING.md) for details.
 ### Smart Contracts
 - **Language**: Rust
 - **Target**: WASM32-WASIP1 (Charms runtime)
-- **SDK**: `charms-sdk` v0.10+
+- **SDK**: `charms-sdk` v0.11+
 - **Serialization**: Borsh, Serde CBOR
 
 ### Frontend

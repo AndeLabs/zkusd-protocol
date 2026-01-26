@@ -1,0 +1,73 @@
+# ============================================================================
+# Open Vault Spell - zkUSD Protocol (DRY-RUN LOCAL)
+# ============================================================================
+# Creates a new CDP (Collateralized Debt Position) on Bitcoin
+#
+# Parameters:
+#   Collateral: 500,000 sats (0.005 BTC)
+#   BTC Price:  $100,000
+#   Debt:       300 zkUSD (user receives)
+#   Total Debt: 302 zkUSD (includes 2 zkUSD liquidation reserve)
+#   ICR:        ~166% (healthy, minimum is 110%)
+#
+# NOTE: Using current WASM VKs for local dry-run
+# ============================================================================
+
+version: 9
+
+apps:
+  # VaultManager - manages CDPs (current WASM VK)
+  e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9: n/69035cf26e7519f98d69d61b04ac3687d54998663ae8e3bba9e3666bc1d5a16e/e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9
+  # zkUSD Token (current WASM VK: 9d9f07fc...)
+  9d9f07fc1ce53fc2c4cea70ea9173e977685d6620885325da6c27144d45a2d60: t/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/9d9f07fc1ce53fc2c4cea70ea9173e977685d6620885325da6c27144d45a2d60
+
+# Witness data for VaultManager validation
+private_inputs:
+  e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+    op: 16  # OPEN_VAULT = 0x10
+    collateral: 500000
+    debt: 30000000000  # 300 zkUSD (8 decimals)
+
+# Public inputs - BTC price data
+public_inputs:
+  e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+    price: 10000000000000  # $100,000 with 8 decimals
+    timestamp_block: 120066
+    source: "Mock"
+    confidence: 100
+
+# Transaction inputs
+ins:
+  # Collateral UTXO - 500,000 sats of BTC
+  - utxo_id: "7c9295a5f070a92938abb7de26569f7b38d4c18096cf4c4446cd33f1bc931e9c:0"
+    charms: {}
+
+# Transaction outputs
+outs:
+  # Output 0: Vault NFT (CDP position)
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      # VaultManager NFT - the vault itself
+      e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+        id: [124, 146, 149, 165, 240, 112, 169, 41, 56, 171, 183, 222, 38, 86, 159, 123, 56, 212, 193, 128, 150, 207, 76, 68, 70, 205, 51, 241, 188, 147, 30, 156]
+        owner: [83, 12, 64, 202, 203, 186, 36, 5, 10, 14, 30, 214, 157, 68, 68, 91, 106, 208, 67, 145, 143, 85, 84, 248, 0, 0, 0, 0, 0, 0, 0, 0]
+        collateral: 500000
+        debt: 30200000000  # 302 zkUSD (300 + 2 liquidation reserve)
+        created_at: 120066
+        last_updated: 120066
+        status: "Active"
+        interest_rate_bps: 100
+        accrued_interest: 0
+        redistributed_debt: 0
+        redistributed_collateral: 0
+        insurance_balance: 0
+
+  # Output 1: zkUSD tokens to user
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      # Fungible zkUSD tokens (using current VK)
+      9d9f07fc1ce53fc2c4cea70ea9173e977685d6620885325da6c27144d45a2d60: 30000000000  # 300 zkUSD
+
+  # Output 2: Change (remaining sats after fees)
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms: {}

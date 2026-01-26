@@ -1,0 +1,60 @@
+import * as bitcoin from 'bitcoinjs-lib';
+import ECPairFactory from 'ecpair';
+import * as ecc from 'tiny-secp256k1';
+
+const ECPair = ECPairFactory(ecc);
+bitcoin.initEccLib(ecc);
+
+const TESTNET4 = {
+  messagePrefix: '\x18Bitcoin Signed Message:\n',
+  bech32: 'tb',
+  bip32: { public: 0x043587cf, private: 0x04358394 },
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
+};
+
+const WIF_KEY = 'cPcsryL9DZi2HjM1saec7aa8k25RTD2poe7SLph6yJDciCQZUPX7';
+const UNSIGNED_TX_HEX = '0200000001b2a3ec25d3b25f9b5b87057ffb578684bd1303fe49203e53629275f3f747dd680300000000ffffffff0423020000000000001600141aa9f50635832ae98aa07e397aa0b2694175679db7060000000000001600141db4ded10fa155036bfb40717ea68022be899fbb0000000000000000fd0d036a057370656c6c4d030382a36776657273696f6e09627478a1646f75747381a100a36561646d696e98200f18ef187218e81828186c0d18d818d518dd1856189e189304183318c3182218330d18331886185018ad18c118aa0a18450218d3185a17184871617574686f72697a65645f6d696e746572982000000000000000000000000000000000000000000000000000000000000000006c746f74616c5f737570706c7900716170705f7075626c69635f696e70757473a183616e982000000000000000000000000000000000000000000000000000000000000000009820189018c9187118c7183318d818e81825186418ea184e182b182e18a0182618d118b71871186118651819182f18bb185c186718691870184d182618a3184d17f699010418a41859184c18590118b21839060a187e18e6183918cb182118431850185718f81839189e188c1878184218bd188318b7187418971885187b18961861189118eb18df1887181c18e618ea18dd186e0518dc18470a184518a816181a18191820184d18b9182e18e718d018d218211878184418201865181d189318b218ae0118a60d1873183718631821081882188718ca189118ba187b184e1819187d188a1840183118dd182e18c3186d188c181c18ad18ed18381851181811186f18a20b187b18be0a18ff18af186718e918a0182718c3187718f20a18a518301879183e184405188118db188218c018e3187518cf0818da185b021891182218ba18f408186e18cc187f189318d818cc18be05181a18c018dd18e818bc18eb18c502186b18b318e818c718c9187b1895188d182b182e181f18c01018d918e418b318a5183a18b80c18aa0618b8184218d01853184218bb188118c218d71839182218ca188418ca18b2188a184218a8189b1882183f1837182318ff18cf182c189e18ec18d1183c18cb18b41837189d18cf18ef18ee18f0181e18931871187a188b18a2184f18a7186718570c1831188e1892183f18f302186b1218fd151852181d184c18dd18b2181b18311518c01832189d18d6183318641821185f18880618e014185b18f818c1183118c5183718be15360800000000001600141aa9f50635832ae98aa07e397aa0b2694175679d00000000';
+const INPUT_VALUE = BigInt(542328);
+
+async function main() {
+  const keyPair = ECPair.fromWIF(WIF_KEY, TESTNET4);
+  const tx = bitcoin.Transaction.fromHex(UNSIGNED_TX_HEX);
+  const psbt = new bitcoin.Psbt({ network: TESTNET4 });
+
+  psbt.addInput({
+    hash: tx.ins[0].hash,
+    index: tx.ins[0].index,
+    sequence: tx.ins[0].sequence,
+    witnessUtxo: {
+      script: bitcoin.payments.p2wpkh({ pubkey: keyPair.publicKey, network: TESTNET4 }).output!,
+      value: INPUT_VALUE,
+    },
+  });
+
+  for (const out of tx.outs) {
+    psbt.addOutput({ script: out.script, value: out.value });
+  }
+
+  psbt.signInput(0, keyPair);
+  psbt.finalizeAllInputs();
+  const signedHex = psbt.extractTransaction().toHex();
+
+  console.log('Broadcasting Token V6...');
+  const resp = await fetch('https://mempool.space/testnet4/api/tx', {
+    method: 'POST',
+    body: signedHex,
+    headers: { 'Content-Type': 'text/plain' },
+  });
+
+  if (resp.ok) {
+    const txid = await resp.text();
+    console.log('SUCCESS! Token V6 TXID:', txid);
+  } else {
+    const err = await resp.text();
+    console.error('Broadcast failed:', resp.status, err);
+  }
+}
+
+main().catch(console.error);

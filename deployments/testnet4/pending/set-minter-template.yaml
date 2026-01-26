@@ -1,0 +1,54 @@
+# ============================================================================
+# zkUSD Token - SetMinter Spell Template
+# ============================================================================
+# Configures the authorized_minter for Token contract.
+# This is a ONE-TIME operation that sets VaultManager as the minter.
+#
+# PREREQUISITES:
+# 1. Token V5 deployed (get TOKEN_APP_ID from deployment)
+# 2. VaultManager deployed (get VM_APP_ID from deployment)
+#
+# USAGE:
+# 1. Replace TOKEN_APP_ID with actual Token app_id
+# 2. Replace VAULT_MANAGER_APP_ID bytes with actual VaultManager app_id
+# 3. Update Token state UTXO in 'ins' section
+# ============================================================================
+# Network: testnet4
+# ============================================================================
+
+version: 9
+
+apps:
+  # Token State NFT - use actual app_id from Token deployment
+  # Replace with: n/{TOKEN_APP_ID}/e15397ee6b00bd3a61d2243086441164c5615f114a7c92330996125215bb1873
+  $00: n/TOKEN_APP_ID_HERE/e15397ee6b00bd3a61d2243086441164c5615f114a7c92330996125215bb1873
+
+private_inputs:
+  # SetMinter operation (op=4)
+  $00:
+    op: 4
+    # VaultManager app_id as the new authorized minter
+    # Replace VAULT_MANAGER_APP_ID bytes below with actual bytes
+    new_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+public_inputs: {}
+
+ins:
+  # Token State UTXO (from Token deployment transaction)
+  # Format: txid:vout
+  - utxo: TOKEN_DEPLOY_TX:0
+    charms:
+      $00:
+        admin: [15, 239, 114, 232, 40, 108, 13, 216, 213, 221, 86, 158, 147, 4, 51, 195, 34, 51, 13, 51, 134, 80, 173, 193, 170, 10, 69, 2, 211, 90, 23, 72]
+        authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        total_supply: 0
+
+outs:
+  # Updated Token State with minter configured
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $00:
+        admin: [15, 239, 114, 232, 40, 108, 13, 216, 213, 221, 86, 158, 147, 4, 51, 195, 34, 51, 13, 51, 134, 80, 173, 193, 170, 10, 69, 2, 211, 90, 23, 72]
+        # VaultManager app_id - replace with actual bytes
+        authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        total_supply: 0

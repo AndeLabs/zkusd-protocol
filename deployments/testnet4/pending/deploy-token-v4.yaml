@@ -1,0 +1,37 @@
+# ============================================================================
+# zkUSD Token V4 - Deployment Spell
+# ============================================================================
+# Deploys fresh Token contract with current source code
+# VK: 9d9f07fc1ce53fc2c4cea70ea9173e977685d6620885325da6c27144d45a2d60
+#
+# IMPORTANT: authorized_minter is set to placeholder (all zeros)
+# Will be updated after VaultManager deployment
+# ============================================================================
+# Created: 2026-01-25
+# Network: testnet4
+# ============================================================================
+
+version: 9
+
+apps:
+  # Token State NFT - using zeros for app_id (will be assigned on deployment)
+  $00: n/0000000000000000000000000000000000000000000000000000000000000000/9d9f07fc1ce53fc2c4cea70ea9173e977685d6620885325da6c27144d45a2d60
+
+private_inputs:
+  # Initialize operation (op=0)
+  $00:
+    op: 0
+    # Placeholder minter - will update after VaultManager deployment
+    authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+public_inputs: {}
+
+ins: []
+
+outs:
+  # Output 0: Token State NFT
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      $00:
+        authorized_minter: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        total_supply: 0

@@ -31,7 +31,9 @@ use zkusd_common::{
 /// Note: TokenMetadata is static and accessed via constants, not stored in state
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 pub struct ZkUsdTokenState {
-    /// Authorized minter (VaultManager app_id)
+    /// Admin address (can set minter once during bootstrap)
+    pub admin: Address,
+    /// Authorized minter (VaultManager app_id) - zero means pending setup
     pub authorized_minter: AppId,
     /// Total supply tracking
     pub total_supply: u64,
@@ -42,12 +44,27 @@ pub struct ZkUsdTokenState {
 // from using a zero address as the minter.
 
 impl ZkUsdTokenState {
-    /// Create new token state with authorized minter
-    pub fn new(authorized_minter: AppId) -> Self {
+    /// Create new token state with admin (minter set to zero - pending configuration)
+    pub fn new(admin: Address) -> Self {
         Self {
+            admin,
+            authorized_minter: [0u8; 32], // Pending - must call set_minter
+            total_supply: 0,
+        }
+    }
+
+    /// Create token state with both admin and minter (for direct initialization)
+    pub fn with_minter(admin: Address, authorized_minter: AppId) -> Self {
+        Self {
+            admin,
             authorized_minter,
             total_supply: 0,
         }
+    }
+
+    /// Check if minter has been configured (non-zero)
+    pub fn is_minter_configured(&self) -> bool {
+        self.authorized_minter != [0u8; 32]
     }
 
     /// Get token name
@@ -370,11 +387,13 @@ mod tests {
     use super::*;
 
     fn create_test_context() -> TokenContext {
+        let admin = [0u8; 32];
+        let vault_manager = [1u8; 32];
         TokenContext {
             inputs: Vec::new(),
             outputs: Vec::new(),
-            token_state: ZkUsdTokenState::new([1u8; 32]),
-            new_token_state: ZkUsdTokenState::new([1u8; 32]),
+            token_state: ZkUsdTokenState::with_minter(admin, vault_manager),
+            new_token_state: ZkUsdTokenState::with_minter(admin, vault_manager),
             caller_app_id: None,
             signer: [0u8; 32],
             block_height: 100,

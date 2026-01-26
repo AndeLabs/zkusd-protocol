@@ -1,0 +1,110 @@
+# ============================================================================
+# Open Vault Full Spell - With zkUSD Token Minting
+# ============================================================================
+# Creates vault #2 and mints zkUSD tokens
+# Requires: TX d8c6e9e8ce18a792d7584eb78550a52b09c6a774569753d124cfec27835d04f9 to be confirmed
+# ============================================================================
+
+version: 9
+
+apps:
+  # VaultManager V2
+  a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d: n/d93540abec20ae20159f9f4de685975f17ad68004b970ae765d71bad42103649/a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d
+  # zkUSD Token (fungible)
+  ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128: t/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
+
+private_inputs:
+  # VaultManager witness
+  a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+    op: 16
+    vault_id: [205, 100, 230, 151, 169, 162, 142, 130, 191, 236, 168, 7, 107, 180, 134, 105, 215, 198, 219, 164, 210, 2, 230, 25, 8, 42, 90, 156, 122, 157, 162, 37]
+    collateral: 500000
+    debt: 1000000000
+  # zkUSD Token witness - Mint operation (op=0x02)
+  ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128:
+    op: 2
+    to: [82, 145, 49, 238, 222, 93, 102, 225, 243, 41, 249, 233, 225, 219, 187, 64, 198, 155, 3, 7, 30, 73, 97, 65, 140, 106, 169, 147, 131, 252, 242, 242]
+    amount: 995000000
+
+public_inputs:
+  a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+    price: 10000000000000
+    timestamp_block: 120157
+    source: Mock
+    confidence: 100
+
+ins:
+  # VaultManager V2 state UTXO (from previous TX output 0)
+  - utxo_id: "d8c6e9e8ce18a792d7584eb78550a52b09c6a774569753d124cfec27835d04f9:0"
+    charms:
+      a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+        protocol:
+          total_collateral: 500000
+          total_debt: 1200000000
+          active_vault_count: 1
+          base_rate: 50
+          last_fee_update_block: 120157
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+  # Collateral UTXO (0.005 BTC = 500,000 sats)
+  - utxo_id: "758a8f853d65d65bc728bbcf8ca134a8a5dd50dc74b8f0ddc3cb0c8d98ffb1c8:3"
+    charms: {}
+  # zkUSD Token state (for mint authorization)
+  - utxo_id: "6cef9848281616baeeb2d7d0fd77f8504222182ff18637bd1ea69c842957d988:0"
+    charms:
+      ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128:
+        authorized_minter: [217, 53, 64, 171, 236, 32, 174, 32, 21, 159, 159, 77, 230, 133, 151, 95, 23, 173, 104, 0, 75, 151, 10, 231, 101, 215, 27, 173, 66, 16, 54, 73]
+        total_supply: 0
+
+outs:
+  # Output 0: Updated VaultManager state
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+        protocol:
+          total_collateral: 1000000
+          total_debt: 2400000000
+          active_vault_count: 2
+          base_rate: 50
+          last_fee_update_block: 120157
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+  # Output 1: New Vault #2
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      a2359b5a481117a9be19f8f3fa21e1d979bac5bfd16c94e0a46c2bc1326c837d:
+        id: [205, 100, 230, 151, 169, 162, 142, 130, 191, 236, 168, 7, 107, 180, 134, 105, 215, 198, 219, 164, 210, 2, 230, 25, 8, 42, 90, 156, 122, 157, 162, 37]
+        owner: [82, 145, 49, 238, 222, 93, 102, 225, 243, 41, 249, 233, 225, 219, 187, 64, 198, 155, 3, 7, 30, 73, 97, 65, 140, 106, 169, 147, 131, 252, 242, 242]
+        collateral: 500000
+        debt: 1200000000
+        created_at: 120157
+        last_updated: 120157
+        status: Active
+        interest_rate_bps: 100
+        accrued_interest: 0
+        redistributed_debt: 0
+        redistributed_collateral: 0
+        insurance_balance: 0
+  # Output 2: Updated zkUSD Token state
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms:
+      ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128:
+        authorized_minter: [217, 53, 64, 171, 236, 32, 174, 32, 21, 159, 159, 77, 230, 133, 151, 95, 23, 173, 104, 0, 75, 151, 10, 231, 101, 215, 27, 173, 66, 16, 54, 73]
+        total_supply: 995000000
+  # Output 3: Minted zkUSD tokens to user (~9.95 zkUSD after fee)
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128: 995000000
+  # Output 4: Change
+  - address: tb1qr25l2p34sv4wnz4q0cuh4g9jd9qh2eua6y5awq
+    charms: {}

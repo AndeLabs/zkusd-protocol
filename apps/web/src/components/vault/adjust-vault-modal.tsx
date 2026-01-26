@@ -1,12 +1,13 @@
 'use client';
 
 import { Button, ICRBadge, Input, MaxButton, Modal } from '@/components/ui';
-import { useAdjustVault, useVaultMetrics } from '@/features/vault';
+import { useAdjustVault, useAdjustVaultDemo, useVaultMetrics } from '@/features/vault';
 import { usePrice } from '@/hooks/use-price';
 import { PROTOCOL } from '@/lib/constants';
+import { isDemoMode } from '@/lib/services';
 import { formatBTC, formatUSD, formatZkUSD } from '@/lib/utils';
 import type { TrackedVault } from '@/stores/vaults';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface AdjustVaultModalProps {
   isOpen: boolean;
@@ -19,7 +20,19 @@ type AdjustDirection = 'add' | 'remove';
 
 export function AdjustVaultModal({ isOpen, onClose, vault }: AdjustVaultModalProps) {
   const { data: priceData } = usePrice();
-  const { adjustVault, isLoading, status } = useAdjustVault();
+
+  // Demo mode detection
+  const [isDemo, setIsDemo] = useState(false);
+  useEffect(() => {
+    setIsDemo(isDemoMode());
+  }, []);
+
+  // Call both hooks (React requires unconditional hook calls)
+  const realAdjust = useAdjustVault();
+  const demoAdjust = useAdjustVaultDemo();
+
+  // Select appropriate hook based on demo mode
+  const { adjustVault, isLoading, status } = isDemo ? demoAdjust : realAdjust;
 
   const [mode, setMode] = useState<AdjustMode>('collateral');
   const [direction, setDirection] = useState<AdjustDirection>('add');

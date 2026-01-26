@@ -1,0 +1,75 @@
+# ============================================================================
+# Open Vault Spell - Simplified Test
+# ============================================================================
+# Solo usa VaultManager para probar la estructura básica
+#
+# ============================================================================
+
+version: 9
+
+apps:
+  # VaultManager - manages CDPs (deployed VK matches current WASM!)
+  e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9: n/69035cf26e7519f98d69d61b04ac3687d54998663ae8e3bba9e3666bc1d5a16e/e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9
+
+# Witness data for VaultManager validation
+private_inputs:
+  e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+    op: 16  # OPEN_VAULT = 0x10
+    vault_id: null
+    collateral: 100000
+    debt: 5000000000  # 50 zkUSD (8 decimals)
+    flash_purpose: null
+    rescuer_discount: null
+    coverage: null
+    premium: null
+    trigger_icr: null
+    insurance_id: null
+    new_owner: null
+
+# Transaction inputs
+ins:
+  # Input 0: VaultManager state UTXO
+  - utxo_id: "df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322:0"
+    charms:
+      e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+        protocol:
+          total_collateral: 0
+          total_debt: 0
+          active_vault_count: 0
+          base_rate: 50
+          last_fee_update_block: 0
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+
+  # Input 1: BTC Collateral UTXO (100,000 sats)
+  - utxo_id: "67f1cfd8be188ff66363a57d741517d54cc2f06b80a149fd3e9b7b167e01af1a:0"
+    charms: {}
+
+# Transaction outputs
+outs:
+  # Output 0: Updated VaultManager state
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+        protocol:
+          total_collateral: 100000
+          total_debt: 5200000000
+          active_vault_count: 1
+          base_rate: 50
+          last_fee_update_block: 120090
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+
+  # Output 1: Change (remaining BTC)
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms: {}

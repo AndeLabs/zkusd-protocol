@@ -1,0 +1,107 @@
+# ============================================================================
+# Open Vault Spell - First zkUSD Mint on Bitcoin!
+# ============================================================================
+# Creates a new CDP (Collateralized Debt Position) on Bitcoin
+#
+# Parameters:
+#   Collateral: 100,000 sats (0.001 BTC) - conservative to save funds
+#   BTC Price:  $100,000
+#   Debt:       50 zkUSD (user receives)
+#   Total Debt: 52 zkUSD (includes 2 zkUSD liquidation reserve)
+#   ICR:        ~192% (healthy, minimum is 110%)
+#
+# ============================================================================
+
+version: 9
+
+apps:
+  # VaultManager - manages CDPs (deployed VK)
+  e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9: n/69035cf26e7519f98d69d61b04ac3687d54998663ae8e3bba9e3666bc1d5a16e/e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9
+  # zkUSD Token (deployed VK)
+  ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128: t/7ff62ba48cbb4e8437aab1a32050ad0e4c8c874db34ab10aa015a9d98bddcef1/ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128
+
+# Witness data for VaultManager validation
+private_inputs:
+  e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+    op: 16  # OPEN_VAULT = 0x10
+    vault_id: null
+    collateral: 100000
+    debt: 5000000000  # 50 zkUSD (8 decimals)
+    flash_purpose: null
+    rescuer_discount: null
+    coverage: null
+    premium: null
+    trigger_icr: null
+    insurance_id: null
+    new_owner: null
+
+# Transaction inputs
+ins:
+  # Input 0: VaultManager state UTXO
+  - utxo_id: "df985065ba8d477b432dac31a25e47b587c6a56d4a28f5213e0b458eb6b7f322:0"
+    charms:
+      e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+        protocol:
+          total_collateral: 0
+          total_debt: 0
+          active_vault_count: 0
+          base_rate: 50
+          last_fee_update_block: 0
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+
+  # Input 1: BTC Collateral UTXO (100,000 sats)
+  - utxo_id: "67f1cfd8be188ff66363a57d741517d54cc2f06b80a149fd3e9b7b167e01af1a:0"
+    charms: {}
+
+# Transaction outputs
+outs:
+  # Output 0: Updated VaultManager state
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+        protocol:
+          total_collateral: 100000
+          total_debt: 5200000000  # 52 zkUSD (50 + 2 reserve)
+          active_vault_count: 1
+          base_rate: 50
+          last_fee_update_block: 120090
+          admin: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+          is_paused: false
+        zkusd_token_id: [127, 246, 43, 164, 140, 187, 78, 132, 55, 170, 177, 163, 32, 80, 173, 14, 76, 140, 135, 77, 179, 74, 177, 10, 160, 21, 169, 217, 139, 221, 206, 241]
+        stability_pool_id: [185, 65, 44, 165, 216, 237, 108, 163, 77, 91, 49, 108, 165, 28, 150, 12, 139, 198, 154, 169, 109, 228, 103, 201, 228, 235, 123, 191, 171, 36, 227, 32]
+        price_oracle_id: [38, 24, 109, 124, 39, 187, 40, 116, 141, 30, 200, 155, 161, 251, 96, 18, 93, 138, 37, 109, 253, 154, 151, 130, 150, 170, 89, 248, 199, 233, 232, 181]
+        active_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+        default_pool: [174, 174, 229, 228, 110, 152, 172, 92, 29, 78, 70, 14, 245, 111, 220, 249, 221, 49, 226, 63, 95, 214, 44, 209, 209, 222, 57, 137, 39, 178, 160, 241]
+
+  # Output 1: New Vault NFT
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      # Vault NFT - using VaultManager VK with vault-specific state
+      e0faaf50096c030e04ec8ed19874b7104bbc17126ca0fd900c08e9f7caa87aa9:
+        id: [103, 241, 207, 216, 190, 24, 143, 246, 99, 99, 165, 125, 116, 21, 23, 213, 76, 194, 240, 107, 128, 161, 73, 253, 62, 155, 123, 22, 126, 1, 175, 26]
+        owner: [82, 177, 32, 203, 45, 237, 18, 2, 129, 64, 225, 237, 78, 168, 40, 151, 106, 232, 64, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        collateral: 100000
+        debt: 5200000000
+        created_at: 120090
+        last_updated: 120090
+        status: "Active"
+        interest_rate_bps: 100
+        accrued_interest: 0
+        redistributed_debt: 0
+        redistributed_collateral: 0
+        insurance_balance: 0
+
+  # Output 2: zkUSD tokens to user (50 zkUSD)
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms:
+      ff936fc6c59a5997e4d429bd806c834bbb8d05fc5ea425997539bec1f79ec128: 5000000000
+
+  # Output 3: Change
+  - address: tb1q22cjpjktm5fq9q5rs7k5a2z39k46sseerr24ru
+    charms: {}

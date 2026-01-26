@@ -1,10 +1,11 @@
 'use client';
 
 import { Button, ICRBadge, Modal } from '@/components/ui';
-import { useCloseVault, useVaultMetrics } from '@/features/vault';
+import { useCloseVault, useCloseVaultDemo, useVaultMetrics } from '@/features/vault';
+import { isDemoMode } from '@/lib/services';
 import { formatBTC, formatZkUSD } from '@/lib/utils';
 import type { TrackedVault } from '@/stores/vaults';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface CloseVaultModalProps {
   isOpen: boolean;
@@ -13,7 +14,18 @@ interface CloseVaultModalProps {
 }
 
 export function CloseVaultModal({ isOpen, onClose, vault }: CloseVaultModalProps) {
-  const { closeVault, isLoading, status } = useCloseVault();
+  // Demo mode detection
+  const [isDemo, setIsDemo] = useState(false);
+  useEffect(() => {
+    setIsDemo(isDemoMode());
+  }, []);
+
+  // Call both hooks (React requires unconditional hook calls)
+  const realClose = useCloseVault();
+  const demoClose = useCloseVaultDemo();
+
+  // Select appropriate hook based on demo mode
+  const { closeVault, isLoading, status } = isDemo ? demoClose : realClose;
   const metrics = useVaultMetrics(vault.collateral, vault.debt);
 
   // Calculate total debt including interest
