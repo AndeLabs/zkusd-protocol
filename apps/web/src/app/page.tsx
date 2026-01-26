@@ -2,6 +2,8 @@ import { ActionCard } from '@/components/action-card';
 import { Footer } from '@/components/layout/footer';
 import { Header } from '@/components/layout/header';
 import { StatsBar } from '@/components/protocol';
+import { DemoToggleButton } from '@/components/ui';
+import Link from 'next/link';
 
 export default function HomePage() {
   return (
@@ -18,6 +20,16 @@ export default function HomePage() {
             Mint zkUSD by depositing BTC as collateral. Powered by zero-knowledge proofs on Bitcoin
             via Charms Protocol.
           </p>
+          <div className="flex justify-center items-center gap-3 mt-3">
+            <Link
+              href="/explorer"
+              className="text-xs text-zinc-500 hover:text-amber-400 transition-colors"
+            >
+              Explorer
+            </Link>
+            <span className="text-zinc-700">&middot;</span>
+            <DemoToggleButton />
+          </div>
         </div>
 
         {/* Protocol Stats */}
