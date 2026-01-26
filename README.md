@@ -43,6 +43,35 @@ All contracts are **deployed and operational** on Bitcoin Testnet4:
 **First zkUSD Minted:**
 - [OpenVault TX - 10 zkUSD minted with 500k sats collateral](https://mempool.space/testnet4/tx/f5a19de4e1297fd681711b912c61dc5514aea2676aafce4737b377267ef6167d)
 
+### How to Verify zkUSD Tokens On-Chain
+
+> Standard Bitcoin explorers (mempool.space) only show BTC amounts. Charms data is embedded in the `OP_RETURN` output as a ZK-proven **spell** - invisible to traditional explorers but fully verifiable.
+
+The first mint transaction (`f5a19de4...`) contains **8 outputs**:
+
+| Output | Content | Charms Data |
+|--------|---------|-------------|
+| `0` | VaultManager State | Protocol: 1 active vault, 500k sats total collateral |
+| `1` | Vault NFT | Owner vault: 500k sats collateral, 12 zkUSD debt |
+| `2` | Token State | total_supply: 1,000,000,000 (10 zkUSD) |
+| `3` | **zkUSD Balance** | **10 zkUSD (1,000,000,000 base units)** |
+| `4` | BTC Change | Remaining BTC |
+| `5` | Commit Output | Charms protocol anchor |
+| `6` | OP_RETURN | Spell data (CBOR-encoded state + ZK proof) |
+| `7` | Fee Change | Transaction fees |
+
+**ZK Proof Verification** (all 3 app contracts validated):
+```
+✅ app contract satisfied: n/a2a55bf3.../395ceff8...  (Token NFT state)
+✅ app contract satisfied: n/e6564c00.../5d4f8232...  (VaultManager)
+✅ app contract satisfied: t/a2a55bf3.../395ceff8...  (zkUSD fungible - 10 zkUSD minted)
+```
+
+To verify locally with Charms CLI:
+```bash
+charms spell check --spell-json <spell.json> --prev-txs <txs.json>
+```
+
 ---
 
 ## Quick Start
@@ -302,10 +331,9 @@ pub struct Insurance {
 - [BitcoinOS Docs](https://docs.bitcoinos.build/)
 - [Charms GitHub](https://github.com/CharmsDev/charms)
 
-### zkUSD Documentation
-- [Deployment Status](./docs/DEPLOYMENT-STATUS.md)
-- [Architecture](./docs/ARCHITECTURE.md)
+### zkUSD
 - [Build Guide](./contracts/BUILDING.md)
+- [Deployment Config](./deployments/testnet4/deployment-config.json)
 
 ---
 

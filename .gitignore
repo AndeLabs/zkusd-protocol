@@ -62,8 +62,11 @@ coverage
 **/wallet.json
 *.hex
 
-# Planning docs
+# Planning docs (local only)
 *_PROGRESS.md
 *_STATUS.md
 *_ANALYSIS.md
 *_DESIGN.md
+PITCH*.md
+DEPLOYMENT.md
+docs/
