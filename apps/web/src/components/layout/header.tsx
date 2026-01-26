@@ -32,8 +32,15 @@ export function Header() {
             </span>
           </Link>
 
-          {/* Center: Price Display */}
+          {/* Center: Price + Nav */}
           <div className="hidden md:flex items-center gap-4">
+            <Link
+              href="/explorer"
+              className="text-sm text-zinc-400 hover:text-white transition-colors"
+            >
+              Explorer
+            </Link>
+            <div className="w-px h-4 bg-zinc-800" />
             <div className="flex items-center gap-2 text-sm">
               <span className="text-zinc-400">BTC</span>
               {priceLoading ? (
@@ -51,7 +58,13 @@ export function Header() {
 
           {/* Right: Wallet */}
           <div className="flex items-center gap-3">
-            {/* Mobile price */}
+            {/* Mobile nav + price */}
+            <Link
+              href="/explorer"
+              className="md:hidden text-xs text-zinc-400 hover:text-white transition-colors"
+            >
+              Explorer
+            </Link>
             <div className="md:hidden text-sm" aria-label="BTC Price">
               {priceData && (
                 <span className="font-mono text-zinc-400" title={`BTC Price: ${formatUSD(priceData.price)}`}>

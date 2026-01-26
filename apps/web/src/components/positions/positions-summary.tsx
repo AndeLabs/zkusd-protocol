@@ -1,8 +1,10 @@
 'use client';
 
+import { TokenBalanceCard } from '@/components/token';
 import { Button, ICRBadge, Skeleton } from '@/components/ui';
 import { AdjustVaultModal, CloseVaultModal } from '@/components/vault';
 import { useUserDeposit } from '@/features/stability-pool';
+import { useTokenBalance } from '@/features/token';
 import { usePrice } from '@/hooks/use-price';
 import { calculateICR, formatBTC, formatZkUSD } from '@/lib/utils';
 import { type TrackedVault, useVaultsStore } from '@/stores/vaults';
@@ -20,6 +22,11 @@ export function PositionsSummary() {
   );
   const { data: spDeposit, isLoading: spLoading } = useUserDeposit();
   const { data: priceData } = usePrice();
+  const {
+    balances: tokenBalances,
+    totalBalance: tokenTotalBalance,
+    hasBalance: hasTokenBalance,
+  } = useTokenBalance();
 
   // Modal state
   const [selectedVault, setSelectedVault] = useState<TrackedVault | null>(null);
@@ -78,7 +85,7 @@ export function PositionsSummary() {
   const isLoading = spLoading;
   const hasVaults = vaults.length > 0;
   const hasSpDeposit = spDeposit && spDeposit.deposit > 0n;
-  const hasPositions = hasVaults || hasSpDeposit;
+  const hasPositions = hasVaults || hasSpDeposit || hasTokenBalance;
 
   return (
     <>
@@ -168,6 +175,14 @@ export function PositionsSummary() {
               </div>
             )}
 
+            {/* zkUSD Tokens Section */}
+            {hasTokenBalance && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-zinc-400">zkUSD Tokens</h4>
+                <TokenBalanceCard balances={tokenBalances} totalBalance={tokenTotalBalance} />
+              </div>
+            )}
+
             {/* Stability Pool Section */}
             {hasSpDeposit && (
               <div className="space-y-3">
@@ -211,11 +226,11 @@ export function PositionsSummary() {
         )}
 
         {/* Note about local tracking */}
-        {hasVaults && (
+        {(hasVaults || hasTokenBalance) && (
           <div className="text-xs text-zinc-500 text-center">
             <p>
-              Vaults are tracked locally in this browser. Full position tracking requires a Charms
-              indexer.
+              Positions are tracked locally in this browser. Full position tracking requires a
+              Charms indexer.
             </p>
           </div>
         )}

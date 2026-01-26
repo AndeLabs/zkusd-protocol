@@ -13,25 +13,26 @@
  */
 
 import { getClient } from '@/lib/sdk';
-import { getSpellCache, clearPendingSpell } from '@/lib/spell-cache';
 import {
-  getUtxoService,
-  getSpellService,
-  createInitialContext,
-  transitionToSelecting,
-  handleUtxoSelection,
-  transitionToBuilding,
-  handleSpellBuilt,
-  transitionToSigning,
-  transitionToBroadcasting,
-  handleSuccess,
-  handleError,
-  reset as resetContext,
-  parseErrorType,
-  isLoading,
-  type VaultStateContext,
   type SpellContext,
+  type VaultStateContext,
+  createInitialContext,
+  getSpellService,
+  getUtxoService,
+  handleError,
+  handleSpellBuilt,
+  handleSuccess,
+  handleUtxoSelection,
+  isLoading,
+  parseErrorType,
+  reset as resetContext,
+  transitionToBroadcasting,
+  transitionToBuilding,
+  transitionToSelecting,
+  transitionToSigning,
 } from '@/lib/services';
+import { clearPendingSpell, getSpellCache } from '@/lib/spell-cache';
+import { useTokenBalanceStore } from '@/stores/token-balance';
 import { useVaultsStore } from '@/stores/vaults';
 import { useWallet } from '@/stores/wallet';
 import { useCallback, useState } from 'react';
@@ -95,11 +96,7 @@ export function useOpenVault() {
         const collateralAmount = Number(params.collateralSats);
 
         // Select UTXO pair BEFORE attempting anything with the prover
-        const utxoResult = await utxoService.selectUtxoPair(
-          address,
-          collateralAmount,
-          feeBuffer
-        );
+        const utxoResult = await utxoService.selectUtxoPair(address, collateralAmount, feeBuffer);
 
         // Handle non-ready states
         if (utxoResult.status !== 'ready') {
@@ -161,33 +158,29 @@ export function useOpenVault() {
 
         const config = await client.getDeploymentConfig();
 
-        // Get previous transactions for all referenced UTXOs
-        const vmStateUtxo = config.contracts.vaultManager.stateUtxo;
-        const vmStateTxid = vmStateUtxo?.split(':')[0];
-        const oracleStateUtxo = config.contracts.priceOracle.stateUtxo;
-        const oracleStateTxid = oracleStateUtxo?.split(':')[0];
-        const tokenStateUtxo = config.contracts.zkusdToken.stateUtxo;
-        const tokenStateTxid = tokenStateUtxo?.split(':')[0];
+        // Collect all unique txids for prev_txs (dedup shared parents)
+        // Note: Oracle is NOT a spell app — its data flows through public_inputs only
+        const vmStateTxid = config.contracts.vaultManager.stateUtxo?.split(':')[0];
+        const tokenStateTxid = config.contracts.zkusdToken.stateUtxo?.split(':')[0];
 
-        const prevTxPromises: Promise<string>[] = [
-          client.getRawTransaction(collateralUtxo.txid),
-          client.getRawTransaction(feeUtxo.txid),
-        ];
+        const allTxids = [collateralUtxo.txid, feeUtxo.txid];
+        if (vmStateTxid) allTxids.push(vmStateTxid);
+        if (tokenStateTxid) allTxids.push(tokenStateTxid);
+        const uniqueTxids = [...new Set(allTxids)];
 
-        if (vmStateTxid) prevTxPromises.push(client.getRawTransaction(vmStateTxid));
-        if (oracleStateTxid) prevTxPromises.push(client.getRawTransaction(oracleStateTxid));
-        if (tokenStateTxid) prevTxPromises.push(client.getRawTransaction(tokenStateTxid));
+        const prevTxMap = new Map<string, string>();
+        const rawTxResults = await Promise.all(
+          uniqueTxids.map(async (txid) => {
+            const raw = await client.getRawTransaction(txid);
+            return { txid, raw };
+          })
+        );
+        for (const { txid, raw } of rawTxResults) {
+          prevTxMap.set(txid, raw);
+        }
 
-        const prevTxResults = await Promise.all(prevTxPromises);
-        const [collateralPrevTx, feePrevTx, vmStatePrevTx, oracleStatePrevTx, tokenStatePrevTx] =
-          prevTxResults;
-
-        // Validate WASM paths
-        if (
-          !config.contracts.vaultManager.wasmPath ||
-          !config.contracts.zkusdToken.wasmPath ||
-          !config.contracts.priceOracle.wasmPath
-        ) {
+        // Validate WASM paths (only VM + Token — oracle is not a spell app)
+        if (!config.contracts.vaultManager.wasmPath || !config.contracts.zkusdToken.wasmPath) {
           throw new Error('WASM binary paths not configured');
         }
 
@@ -204,19 +197,15 @@ export function useOpenVault() {
           return btoa(binary);
         };
 
-        const [vmBinary, tokenBinary, oracleBinary] = await Promise.all([
+        const [vmBinary, tokenBinary] = await Promise.all([
           loadBinary(config.contracts.vaultManager.wasmPath),
           loadBinary(config.contracts.zkusdToken.wasmPath),
-          loadBinary(config.contracts.priceOracle.wasmPath),
         ]);
 
         toast.loading('Generating zero-knowledge proof...', { id: 'vault-tx' });
 
-        // Build prevTxs array
-        const prevTxs = [collateralPrevTx, feePrevTx];
-        if (vmStatePrevTx) prevTxs.push(vmStatePrevTx);
-        if (oracleStatePrevTx) prevTxs.push(oracleStatePrevTx);
-        if (tokenStatePrevTx) prevTxs.push(tokenStatePrevTx);
+        // Build prevTxs array from deduplicated map
+        const prevTxs = uniqueTxids.map((txid) => prevTxMap.get(txid)!);
 
         let proveResult: { commitTx: string; spellTx: string };
 
@@ -226,7 +215,6 @@ export function useOpenVault() {
             binaries: {
               [config.contracts.vaultManager.vk]: vmBinary,
               [config.contracts.zkusdToken.vk]: tokenBinary,
-              [config.contracts.priceOracle.vk]: oracleBinary,
             },
             prevTxs,
             fundingUtxo: feeUtxo.id,
@@ -273,7 +261,9 @@ export function useOpenVault() {
             errorMessage.toLowerCase().includes('cancelled') ||
             errorMessage.toLowerCase().includes('denied')
           ) {
-            setCtx((prev) => handleError(prev, 'Transaction signing was cancelled', 'user_rejected'));
+            setCtx((prev) =>
+              handleError(prev, 'Transaction signing was cancelled', 'user_rejected')
+            );
             throw new Error('Transaction signing was cancelled');
           }
           // Try using unsigned transactions as fallback
@@ -323,9 +313,10 @@ export function useOpenVault() {
         });
 
         // Store vault locally
+        // Vault NFT is at output index 1 (outs[1] per spell structure)
         addVault({
           id: spellContext.vaultId,
-          utxo: `${spellTxId}:0`,
+          utxo: `${spellTxId}:1`,
           owner: publicKey,
           collateral: params.collateralSats,
           debt: params.debtRaw,
@@ -340,15 +331,48 @@ export function useOpenVault() {
           localUpdatedAt: Date.now(),
         });
 
+        // Store minted token balance locally
+        // Output index 3 = zkUSD tokens (per spell outs order)
+        useTokenBalanceStore.getState().addBalance({
+          address: publicKey,
+          amount: params.debtRaw,
+          utxo: `${spellTxId}:3`,
+          sourceTxId: spellTxId,
+          sourceOperation: 'mint',
+          updatedAt: Date.now(),
+        });
+
+        // Update cached deployment config for consecutive mints
+        // After a mint, state UTXOs move to the new spell TX outputs:
+        //   VM state:    spellTxId:0 (outs[0])
+        //   Token state: spellTxId:2 (outs[2])
+        try {
+          const deployConfig = await client.getDeploymentConfig();
+          deployConfig.contracts.vaultManager.stateUtxo = `${spellTxId}:0`;
+          deployConfig.contracts.zkusdToken.stateUtxo = `${spellTxId}:2`;
+          if (deployConfig.protocolState) {
+            deployConfig.protocolState.totalCollateral += Number(params.collateralSats);
+            // Vault debt = user debt + liquidation reserve (2 zkUSD = 200_000_000)
+            deployConfig.protocolState.totalDebt += Number(params.debtRaw) + 200_000_000;
+            deployConfig.protocolState.activeVaultCount += 1;
+            deployConfig.protocolState.tokenTotalSupply += Number(params.debtRaw);
+            deployConfig.protocolState.lastFeeUpdateBlock = spellContext.frozenValues.blockHeight;
+          }
+        } catch {
+          // Non-critical: config update failure doesn't affect the completed mint
+          console.warn('[OpenVault] Failed to update cached deployment config');
+        }
+
         return result;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to open vault';
         const errorType = parseErrorType(message);
 
         // Calculate next available time for burned UTXOs
-        const nextAvailableAt = errorType === 'utxo_burned' || errorType === 'all_reserved'
-          ? Date.now() + 60 * 60 * 1000
-          : undefined;
+        const nextAvailableAt =
+          errorType === 'utxo_burned' || errorType === 'all_reserved'
+            ? Date.now() + 60 * 60 * 1000
+            : undefined;
 
         setCtx((prev) => handleError(prev, message, errorType, nextAvailableAt));
 

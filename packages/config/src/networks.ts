@@ -59,6 +59,21 @@ export interface NetworkDeployment {
     /** Redemption fee floor in basis points */
     redemptionFeeFloorBps: number;
   };
+  /** On-chain protocol state snapshot (updated after each confirmed operation) */
+  protocolState?: {
+    /** Total BTC collateral locked in all vaults (satoshis) */
+    totalCollateral: number;
+    /** Total zkUSD debt across all vaults (8 decimals) */
+    totalDebt: number;
+    /** Number of active vaults */
+    activeVaultCount: number;
+    /** Current base rate in basis points */
+    baseRate: number;
+    /** Block height of last fee update */
+    lastFeeUpdateBlock: number;
+    /** Total zkUSD token supply (8 decimals) */
+    tokenTotalSupply: number;
+  };
 }
 
 // Prover API URLs with fallbacks

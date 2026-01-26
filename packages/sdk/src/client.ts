@@ -126,6 +126,7 @@ export class ZkUsdClient {
             admin: TESTNET4_CONFIG.addresses.admin,
             outputAddress: TESTNET4_CONFIG.addresses.outputAddress,
           },
+          protocolState: TESTNET4_CONFIG.protocolState,
         };
         break;
 

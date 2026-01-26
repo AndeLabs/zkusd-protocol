@@ -65,6 +65,21 @@ export interface TokenBalance {
   balance: bigint;
 }
 
+export interface TrackedTokenBalance {
+  /** Owner address (public key hex) */
+  address: string;
+  /** Token amount in base units (8 decimals) */
+  amount: bigint;
+  /** UTXO where the token balance lives ("txid:vout") */
+  utxo: string;
+  /** Transaction that created this balance */
+  sourceTxId: string;
+  /** Type of operation that created this balance */
+  sourceOperation: 'mint' | 'transfer' | 'redeem';
+  /** Timestamp of last update (ms) */
+  updatedAt: number;
+}
+
 // ============================================================================
 // Oracle Types
 // ============================================================================
@@ -204,5 +219,14 @@ export interface DeploymentConfig {
   addresses: {
     admin: string;
     outputAddress: string;
+  };
+  /** On-chain protocol state snapshot (from last confirmed operation) */
+  protocolState?: {
+    totalCollateral: number;
+    totalDebt: number;
+    activeVaultCount: number;
+    baseRate: number;
+    lastFeeUpdateBlock: number;
+    tokenTotalSupply: number;
   };
 }

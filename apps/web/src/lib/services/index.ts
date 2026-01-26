@@ -47,6 +47,13 @@ export {
   type ErrorType,
 } from './vault-state-machine';
 
+// Token Balance Service
+export {
+  getTokenBalanceService,
+  type TokenBalanceService,
+  type RecordMintParams,
+} from './token-balance-service';
+
 // Demo Service
 export {
   isDemoMode,

@@ -48,22 +48,24 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
     zkusdToken: {
       // Token V8 - VK-based matching (matches_app) for deploy identity transition
       // SetMinter V4 authorized VaultManager V6 (TX 5f0e8aa6...)
+      // State UTXO updated after first mint (TX f5a19de4...)
       appId: 'a2a55bf3131001674e2dfc952944d870aab7b5eddf929c1bde1f1e739c230770',
       vk: '395ceff8ff029ff4399fb158859cf7e59a6b1b7383306d2229bcf20e014201c4',
       appRef: 'n/a2a55bf3131001674e2dfc952944d870aab7b5eddf929c1bde1f1e739c230770/395ceff8ff029ff4399fb158859cf7e59a6b1b7383306d2229bcf20e014201c4',
       spellTx: '574e778f7dd27ac1985f24b956b926b10190f69c374019ba9aba60a459d8a394',
-      stateUtxo: '5f0e8aa6b39ae268c743bf6216e299533612344dc1daecdcf98dc7eae726d48d:0',
-      status: 'in_mempool',
+      stateUtxo: 'f5a19de4e1297fd681711b912c61dc5514aea2676aafce4737b377267ef6167d:2',
+      status: 'confirmed',
       wasmPath: '/wasm/zkusd-token-app.wasm',
     },
     vaultManager: {
       // VaultManager V6 - VK-based matching + Token V8 app_id
+      // State UTXO updated after first mint (TX f5a19de4...)
       appId: 'e6564c00d5ea8cb8226c7c334ab7089c806149debe1382c75c1909f447290b3c',
       vk: '5d4f82322c90250b7db0402449708c6871627c38139f17df3806d0926de9367b',
       appRef: 'n/e6564c00d5ea8cb8226c7c334ab7089c806149debe1382c75c1909f447290b3c/5d4f82322c90250b7db0402449708c6871627c38139f17df3806d0926de9367b',
       spellTx: 'eb13f9b9d0ed1eb8160b7e0732ad03ca0473cb3e3ed5e3b7936630e7a4c4d261',
-      stateUtxo: 'eb13f9b9d0ed1eb8160b7e0732ad03ca0473cb3e3ed5e3b7936630e7a4c4d261:0',
-      status: 'in_mempool',
+      stateUtxo: 'f5a19de4e1297fd681711b912c61dc5514aea2676aafce4737b377267ef6167d:0',
+      status: 'confirmed',
       wasmPath: '/wasm/zkusd-vault-manager-app.wasm',
     },
     stabilityPool: {
@@ -90,6 +92,17 @@ export const TESTNET4_CONFIG: NetworkDeployment = {
     gasCompensation: 200_000_000n, // 2 zkUSD
     liquidationBonusBps: 50, // 0.5%
     redemptionFeeFloorBps: 50, // 0.5%
+  },
+
+  // Post-mint protocol state snapshot (from TX f5a19de4...)
+  // Updated after first successful mint on 2026-01-26
+  protocolState: {
+    totalCollateral: 500_000,        // 0.005 BTC (500k sats)
+    totalDebt: 1_200_000_000,        // 12 zkUSD (10 debt + 2 liquidation reserve)
+    activeVaultCount: 1,
+    baseRate: 50,                    // 0.5% base rate
+    lastFeeUpdateBlock: 120228,
+    tokenTotalSupply: 1_000_000_000, // 10 zkUSD minted
   },
 };
 
